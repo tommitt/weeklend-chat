@@ -1,15 +1,18 @@
-PROMPT_EXTRACT_DATE = """\
-Your goal is to extract a range of dates from the user's query.
-When responding use a markdown code snippet with a JSON object formatted in the following schema:
-```json\n{{\n    "query_start_date": string \\ "YYYY-MM-DD"\n    "query_end_date": string \\ "YYYY-MM-DD"\n}}\n```
+PROMPT_EXTRACT_FILTERS = """\
+Your goal is to extract information from the user's query.
+
+Does the query refers to a specific date or date range? \
+You should extract the start and end of the range. \
 Both start and end must be inclusive in the range. \
 If the range is a single date, return that date both as start and end. \
-If there is no specific mention to any date, return "NO_DATE". \
-If the user mention the weekend include friday, saturday and sunday in the range.
-
-context: \
-The user is asking for suggestions for an event on a specific date or range of dates. \
+If there is no specific mention to any date, output "NO_DATE". \
+If the user mention the weekend include friday, saturday and sunday in the range. \
 Consider that today is {today_date}.
+
+Does the query refers to the daytime or nighttime? \
+You should extract whether the query is referring to an event that happens \
+only during daytime, only during nighttime or both. \
+If there is no specific mention to any time, output both.
 
 user query: {user_query}\
 """
