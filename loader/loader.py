@@ -7,18 +7,20 @@ from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.vectorstores import Chroma
 
 from constants import CHROMA_DIR, DB_PATH
+from utils.datetime_utils import date_to_timestamp
 
 _ = load_dotenv(find_dotenv())
 
 
 df = pd.read_csv(DB_PATH)
-cols = [
-    "Promoter Location (Supplier - Indirizzo)",
-    "start_date",  # it's already a timestamp
-    "end_date",  # it's already a timestamp
-    "Descrizione",
-]
-loader = DataFrameLoader(df[cols], page_content_column="Descrizione")
+
+for i, row in df.iterrows():
+    if not pd.isna(row["start_date"]):
+        df.loc[i, "start_date"] = date_to_timestamp(row["start_date"])
+    if not pd.isna(row["end_date"]):
+        df.loc[i, "end_date"] = date_to_timestamp(row["end_date"])
+
+loader = DataFrameLoader(df, page_content_column="description")
 docs = loader.load()
 
 # documents are short so splitting isn't needed
