@@ -1,5 +1,9 @@
 PROMPT_EXTRACT_FILTERS = """\
-Your goal is to extract information from the user's query.
+Your goal is to extract information from the user's query. \
+The user is asking for suggestions on events or places.
+
+Is the query relevant? \
+You should evaluate whether the query is valid or not.
 
 Does the query refers to a specific date or date range? \
 You should extract the start and end of the range. \

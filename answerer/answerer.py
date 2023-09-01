@@ -10,7 +10,7 @@ from langchain.prompts import ChatPromptTemplate
 from langchain.retrievers.self_query.chroma import ChromaTranslator
 from langchain.vectorstores import Chroma
 
-from answerer.messages import MESSAGE_NOTHING_RELEVANT
+from answerer.messages import MESSAGE_INVALID_QUERY, MESSAGE_NOTHING_RELEVANT
 from answerer.prompts import PROMPT_CONTEXT_ANSWER, PROMPT_EXTRACT_FILTERS
 from constants import CHROMA_DIR, N_DOCS
 from utils.datetime_utils import date_to_timestamp
@@ -37,6 +37,11 @@ class Answerer:
         self.filter_parser = StructuredOutputParser.from_response_schemas(
             [
                 ResponseSchema(
+                    name="query_is_invalid",
+                    description="This tells if the query is invalid. Output True if it is invalid, False otherwise.",
+                    type="boolean",
+                ),
+                ResponseSchema(
                     name="query_start_date",
                     description='This is the start of the range in format "YYYY-MM-DD". If this information is not found, output "NO DATE".',
                 ),
@@ -51,52 +56,70 @@ class Answerer:
             ]
         )
 
-    def run(self, user_query: str, today_date: datetime.date) -> str:
-        # filter extraction (custom self-query)
-        filter_prompt = ChatPromptTemplate.from_template(
+    def run_extract_filters(
+        self, user_query: str, today_date: datetime.date
+    ) -> tuple[bool, dict]:
+        """Self-query to extract filters for later retrieval"""
+        prompt = ChatPromptTemplate.from_template(
             template=PROMPT_EXTRACT_FILTERS + "\n\n{format_instructions}"
         )
 
-        filter_response_raw = self.llm(
-            filter_prompt.format_messages(
+        response_raw = self.llm(
+            prompt.format_messages(
                 today_date=today_date.strftime("%Y-%m-%d (%A)"),
                 user_query=user_query,
                 format_instructions=self.filter_parser.get_format_instructions(),
             )
         )
-        filter_response = self.filter_parser.parse(filter_response_raw.content)
+        response = self.filter_parser.parse(response_raw.content)
 
-        if filter_response["query_start_date"] == "NO_DATE":
-            filter_response["query_start_date"] = today_date
-        if filter_response["query_end_date"] == "NO_DATE":
-            filter_response["query_end_date"] = today_date
+        if response["query_start_date"] == "NO_DATE":
+            response["query_start_date"] = today_date
+        if response["query_end_date"] == "NO_DATE":
+            response["query_end_date"] = today_date + datetime.timedelta(days=7)
 
-        filter = Operation(
-            operator="and",
-            arguments=[
-                Comparison(
-                    comparator="lte",
-                    attribute="start_date",
-                    value=date_to_timestamp(filter_response["query_end_date"]),
-                ),
-                Comparison(
-                    comparator="gte",
-                    attribute="end_date",
-                    value=date_to_timestamp(filter_response["query_start_date"]),
-                ),
-            ],
-        )
+        filters = [
+            Comparison(
+                comparator="lte",
+                attribute="start_date",
+                value=date_to_timestamp(response["query_end_date"]),
+            ),
+            Comparison(
+                comparator="gte",
+                attribute="end_date",
+                value=date_to_timestamp(response["query_start_date"]),
+            ),
+        ]
+
+        if response["query_time"] == "daytime":
+            filters.append(
+                Comparison(comparator="eq", attribute="is_during_day", value=True)
+            )
+        elif response["query_time"] == "nighttime":
+            filters.append(
+                Comparison(comparator="eq", attribute="is_during_night", value=True)
+            )
 
         _, filter_kwargs = self.translator.visit_structured_query(
-            structured_query=StructuredQuery(query=user_query, filter=filter)
+            structured_query=StructuredQuery(
+                query=user_query, filter=Operation(operator="and", arguments=filters)
+            )
         )
+
+        return response["query_is_invalid"], filter_kwargs
+
+    def run(self, user_query: str, today_date: datetime.date) -> str:
+        # extract db filters
+        is_invalid, filter_kwargs = self.run_extract_filters(user_query, today_date)
+        if is_invalid:
+            return MESSAGE_INVALID_QUERY
 
         # retriever of similar documents
         relevant_docs = self.db.similarity_search(user_query, k=N_DOCS, **filter_kwargs)
 
         # answer generation
         if not len(relevant_docs):
-            answer = MESSAGE_NOTHING_RELEVANT
+            return MESSAGE_NOTHING_RELEVANT
         else:
             query = PROMPT_CONTEXT_ANSWER.format(
                 context="\n\n".join(
@@ -107,5 +130,4 @@ class Answerer:
             )
 
             answer = self.llm.predict(query)
-
-        return answer
+            return answer
