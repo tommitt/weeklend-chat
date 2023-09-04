@@ -1,7 +1,5 @@
 import datetime
-import os
 
-from dotenv import find_dotenv, load_dotenv
 from langchain.chains.query_constructor.ir import Comparison, Operation, StructuredQuery
 from langchain.chat_models import ChatOpenAI
 from langchain.embeddings.openai import OpenAIEmbeddings
@@ -12,21 +10,17 @@ from langchain.vectorstores import Chroma
 
 from answerer.messages import MESSAGE_INVALID_QUERY, MESSAGE_NOTHING_RELEVANT
 from answerer.prompts import PROMPT_CONTEXT_ANSWER, PROMPT_EXTRACT_FILTERS
-from constants import CHROMA_DIR, N_DOCS
+from constants import CHROMA_DIR, N_DOCS, OPENAI_API_KEY
 from utils.datetime_utils import date_to_timestamp
 
 
 class Answerer:
     def __init__(self) -> None:
-        _ = load_dotenv(find_dotenv())
-
         self.llm = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0)
 
         self.db = Chroma(
             persist_directory=CHROMA_DIR,
-            embedding_function=OpenAIEmbeddings(
-                openai_api_key=os.environ["OPENAI_API_KEY"]
-            ),
+            embedding_function=OpenAIEmbeddings(openai_api_key=OPENAI_API_KEY),
         )
 
         self.translator = ChromaTranslator()
