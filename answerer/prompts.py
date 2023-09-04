@@ -23,7 +23,7 @@ user query: {user_query}\
 
 PROMPT_CONTEXT_ANSWER = """\
 Your goal is to advise the user on what to do based on the question below. \
-You are provided with {k} places' description between triple backticks. \
+You are provided with {k} events' description between triple backticks. \
 Provide an answer by suggesting all those places separately, be sure not to mix information of different places. \
 If the context is not completely relevant, answer accordingly and don't try to make up any detail.
 Answer in italian.

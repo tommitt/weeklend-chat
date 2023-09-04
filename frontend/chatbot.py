@@ -8,11 +8,13 @@ def app() -> None:
 
     if "init" not in st.session_state:
         st.session_state["init"] = True
-        st.session_state["messages"] = []
+        st.session_state["messages"] = [
+            {
+                "role": "assistant",
+                "content": "Ciao Weeklender! 👋🏻\nVuoi consigli su cosa fare a Torino?",
+            }
+        ]
         st.session_state["answerer"] = Answerer()
-
-    date = st.date_input("Data di “oggi”")
-    st.divider()
 
     for message in st.session_state["messages"]:
         with st.chat_message(message["role"]):
@@ -24,7 +26,7 @@ def app() -> None:
         st.session_state["messages"].append({"role": "user", "content": prompt})
 
         with st.spinner("Sto pensando..."):
-            response = st.session_state["answerer"].run(prompt, date)
+            response = st.session_state["answerer"].run(prompt)
 
         with st.chat_message("assistant"):
             st.markdown(response)

@@ -1,7 +1,9 @@
 import datetime
+import logging
 
 from langchain.chains.query_constructor.ir import Comparison, Operation, StructuredQuery
 from langchain.chat_models import ChatOpenAI
+from langchain.docstore.document import Document
 from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.output_parsers import ResponseSchema, StructuredOutputParser
 from langchain.prompts import ChatPromptTemplate
@@ -25,10 +27,15 @@ class Answerer:
 
         self.translator = ChromaTranslator()
 
-        self.init_output_parsers()
+    def run_extract_filters(self, user_query: str) -> tuple[bool, dict]:
+        """Self-query to extract filters for later retrieval"""
+        today_date = datetime.date.today()
 
-    def init_output_parsers(self) -> None:
-        self.filter_parser = StructuredOutputParser.from_response_schemas(
+        prompt = ChatPromptTemplate.from_template(
+            template=PROMPT_EXTRACT_FILTERS + "\n\n{format_instructions}"
+        )
+
+        output_parser = StructuredOutputParser.from_response_schemas(
             [
                 ResponseSchema(
                     name="query_is_invalid",
@@ -50,27 +57,23 @@ class Answerer:
             ]
         )
 
-    def run_extract_filters(
-        self, user_query: str, today_date: datetime.date
-    ) -> tuple[bool, dict]:
-        """Self-query to extract filters for later retrieval"""
-        prompt = ChatPromptTemplate.from_template(
-            template=PROMPT_EXTRACT_FILTERS + "\n\n{format_instructions}"
-        )
-
         response_raw = self.llm(
             prompt.format_messages(
                 today_date=today_date.strftime("%Y-%m-%d (%A)"),
                 user_query=user_query,
-                format_instructions=self.filter_parser.get_format_instructions(),
+                format_instructions=output_parser.get_format_instructions(),
             )
         )
-        response = self.filter_parser.parse(response_raw.content)
+        response = output_parser.parse(response_raw.content)
+
+        logging.info(
+            "\n".join([f"Filter {key}: {response[key]}" for key in response.keys()])
+        )
 
         if response["query_start_date"] == "NO_DATE":
             response["query_start_date"] = today_date
         if response["query_end_date"] == "NO_DATE":
-            response["query_end_date"] = today_date + datetime.timedelta(days=7)
+            response["query_end_date"] = today_date + datetime.timedelta(days=6)
 
         filters = [
             Comparison(
@@ -102,26 +105,71 @@ class Answerer:
 
         return response["query_is_invalid"], filter_kwargs
 
-    def run(self, user_query: str, today_date: datetime.date) -> str:
-        # extract db filters
-        is_invalid, filter_kwargs = self.run_extract_filters(user_query, today_date)
+    def run_generate_answer(self, user_query: str, docs: list[Document]) -> str:
+        prompt = ChatPromptTemplate.from_template(
+            template=PROMPT_CONTEXT_ANSWER + "\n\n{format_instructions}"
+        )
+
+        output_parser = StructuredOutputParser.from_response_schemas(
+            [
+                ResponseSchema(
+                    name="intro",
+                    description="This is your intro to the message.",
+                )
+            ]
+            + [
+                ResponseSchema(
+                    name=f"event_summary_{i+1}",
+                    description=f"This is a long summary of event number {i+1}.",
+                )
+                for i in range(len(docs))
+            ]
+            + [
+                ResponseSchema(
+                    name="outro",
+                    description="This is your outro to the message. This must include a commentary on the relevance of the given events to the user's question. It can also be an empty string.",
+                )
+            ]
+        )
+
+        response_raw = self.llm(
+            prompt.format_messages(
+                context="\n\n".join(
+                    [f"{i+1}. ```{doc.page_content}```" for i, doc in enumerate(docs)]
+                ),
+                question=user_query,
+                k=len(docs),
+                format_instructions=output_parser.get_format_instructions(),
+            )
+        )
+        response = output_parser.parse(response_raw.content)
+
+        answer = "\n\n".join(
+            [response["intro"]]
+            + [
+                f"{i+1}. "
+                + response[f"event_summary_{i+1}"]
+                + (
+                    f'\n📍 {docs[i].metadata["location"]}'
+                    if docs[i].metadata["location"]
+                    else ""
+                )
+                + (f'\n🌐 {docs[i].metadata["url"]}' if docs[i].metadata["url"] else "")
+                for i in range(len(docs))
+            ]
+            + [response["outro"]]
+        )
+
+        return answer
+
+    def run(self, user_query: str) -> str:
+        is_invalid, filter_kwargs = self.run_extract_filters(user_query=user_query)
         if is_invalid:
             return MESSAGE_INVALID_QUERY
 
-        # retriever of similar documents
         relevant_docs = self.db.similarity_search(user_query, k=N_DOCS, **filter_kwargs)
 
-        # answer generation
         if not len(relevant_docs):
             return MESSAGE_NOTHING_RELEVANT
         else:
-            query = PROMPT_CONTEXT_ANSWER.format(
-                context="\n\n".join(
-                    [f"```{doc.page_content}```" for doc in relevant_docs]
-                ),
-                question=user_query,
-                k=N_DOCS,
-            )
-
-            answer = self.llm.predict(query)
-            return answer
+            return self.run_generate_answer(user_query=user_query, docs=relevant_docs)
