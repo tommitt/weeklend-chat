@@ -36,7 +36,7 @@ async def handle_get_request(request: Request):
     hub_verify_token = request.query_params.get("hub.verify_token")
 
     if not hub_mode or not hub_challenge or not hub_verify_token:
-        raise HTTPException(status_code=400, detail="Missing query parameters")
+        raise HTTPException(status_code=400, detail="Missing query parameters.")
 
     if hub_verify_token == WHATSAPP_HOOK_TOKEN:
         return hub_challenge
@@ -46,13 +46,29 @@ async def handle_get_request(request: Request):
 
 @app.post("/webhooks")
 async def handle_post_request(payload: WebhookPayload):
-    whatsapp_client = WhatsappWrapper()
-    value = payload.entry[0]["changes"][0]["value"]
+    try:
+        whatsapp_client = WhatsappWrapper()
 
-    # mirror answer
-    response = whatsapp_client.send_message(
-        to_phone_number=value["metadata"]["display_phone_number"],
-        message="Mirror-bot:" + value["messages"][0]["text"]["body"],
-    )
+        try:
+            message = payload.entry[0]["changes"][0]["value"]["messages"][0]
+        except:
+            raise HTTPException(
+                status_code=400, detail="No message present in request."
+            )
 
-    return {"status_code": response.status_code, "content": response.text}
+        if "type" not in message or message["type"] != "text":
+            return {
+                "status_code": 200,
+                "content": "Not answered: message type is not text",
+            }
+
+        # mirror answer
+        response = whatsapp_client.send_message(
+            to_phone_number=message["from"],
+            message="Mirror-bot:" + message["text"]["body"],
+        )
+
+        return {"status_code": response.status_code, "content": response.text}
+
+    except:
+        raise HTTPException(status_code=500, detail="Something went wrong.")

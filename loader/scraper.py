@@ -121,20 +121,16 @@ class GuidatorinoScraper(BaseScraper):
             output["opening_time"].append(timing[0])
             output["closing_time"].append(timing[1])
 
-            output["city"].append(
-                sub_contents[1].find("span", {"class": "evento-citta"}).text
+            city = sub_contents[1].find("span", {"class": "evento-citta"}).text
+            address = sub_contents[1].find("span", {"class": "evento-indirizzo"}).text
+            place = sub_contents[1].find("span", {"class": "lista-luogo"}).text
+            location = (
+                city
+                if (city == place) and (city == address)
+                else " - ".join([place, address, city])
             )
-            output["location"].append(
-                "\n".join(
-                    [
-                        sub_contents[1].find("span", {"class": "lista-luogo"}).text,
-                        sub_contents[1]
-                        .find("span", {"class": "evento-indirizzo"})
-                        .text,
-                        sub_contents[1].find("span", {"class": "evento-citta"}).text,
-                    ]
-                )
-            )
+            output["city"].append(city)
+            output["location"].append(location)
 
         for i in range(n_events):
             print(f"{i+1}/{n_events}")

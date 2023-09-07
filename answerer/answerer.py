@@ -44,11 +44,11 @@ class Answerer:
                 ),
                 ResponseSchema(
                     name="query_start_date",
-                    description='This is the start of the range in format "YYYY-MM-DD". If this information is not found, output "NO DATE".',
+                    description='This is the start of the range in format "YYYY-MM-DD". If this information is not found, output "NO_DATE".',
                 ),
                 ResponseSchema(
                     name="query_end_date",
-                    description='This is the end of the range in format "YYYY-MM-DD". If this information is not found, output "NO DATE".',
+                    description='This is the end of the range in format "YYYY-MM-DD". If this information is not found, output "NO_DATE".',
                 ),
                 ResponseSchema(
                     name="query_time",

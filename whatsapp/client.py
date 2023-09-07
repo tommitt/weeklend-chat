@@ -19,13 +19,16 @@ class WhatsappWrapper:
         self,
         to_phone_number: str,
         message: str,
-        preview_url: bool = True,
     ) -> requests.Response:
         payload = {
             "messaging_product": "whatsapp",
+            "recipient_type": "individual",
             "to": to_phone_number,
             "type": "text",
-            "text": {"body": message, "preview_url": preview_url},
+            "text": {
+                "body": message,
+                "preview_url": False,
+            },
         }
 
         response = requests.post(
