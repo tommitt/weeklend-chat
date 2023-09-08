@@ -1,6 +1,6 @@
 import streamlit as st
 
-from answerer.answerer import Answerer
+from app.answerer.answerer import Answerer
 
 
 def app() -> None:

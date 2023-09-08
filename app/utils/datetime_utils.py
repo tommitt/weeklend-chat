@@ -1,6 +1,6 @@
 import datetime
 
-from constants import TIMESTAMP_ORIGIN
+from app.constants import TIMESTAMP_ORIGIN
 
 
 def date_to_timestamp(date: str | datetime.datetime | datetime.date) -> int:

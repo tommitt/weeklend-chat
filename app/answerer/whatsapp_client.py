@@ -1,6 +1,6 @@
 import requests
 
-from constants import WHATSAPP_API_TOKEN, WHATSAPP_NUMBER_ID
+from app.constants import WHATSAPP_API_TOKEN, WHATSAPP_NUMBER_ID
 
 
 class WhatsappWrapper:

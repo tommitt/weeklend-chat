@@ -2,8 +2,8 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.requests import Request
 from pydantic import BaseModel
 
-from constants import WHATSAPP_HOOK_TOKEN
-from whatsapp.client import WhatsappWrapper
+from app.answerer.whatsapp_client import WhatsappWrapper
+from app.constants import WHATSAPP_HOOK_TOKEN
 
 app = FastAPI()
 

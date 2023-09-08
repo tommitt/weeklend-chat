@@ -10,10 +10,10 @@ from langchain.prompts import ChatPromptTemplate
 from langchain.retrievers.self_query.chroma import ChromaTranslator
 from langchain.vectorstores import Chroma
 
-from answerer.messages import MESSAGE_INVALID_QUERY, MESSAGE_NOTHING_RELEVANT
-from answerer.prompts import PROMPT_CONTEXT_ANSWER, PROMPT_EXTRACT_FILTERS
-from constants import CHROMA_DIR, N_DOCS, OPENAI_API_KEY
-from utils.datetime_utils import date_to_timestamp
+from app.answerer.messages import MESSAGE_INVALID_QUERY, MESSAGE_NOTHING_RELEVANT
+from app.answerer.prompts import PROMPT_CONTEXT_ANSWER, PROMPT_EXTRACT_FILTERS
+from app.constants import CHROMA_DIR, N_DOCS, OPENAI_API_KEY
+from app.utils.datetime_utils import date_to_timestamp
 
 
 class Answerer:

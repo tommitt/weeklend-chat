@@ -3,8 +3,8 @@ from langchain.document_loaders import DataFrameLoader
 from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.vectorstores import Chroma
 
-from constants import CHROMA_DIR, DB_PATH, OPENAI_API_KEY
-from utils.datetime_utils import date_to_timestamp
+from app.constants import CHROMA_DIR, DB_PATH, OPENAI_API_KEY
+from app.utils.datetime_utils import date_to_timestamp
 
 df = pd.read_csv(DB_PATH)
 
