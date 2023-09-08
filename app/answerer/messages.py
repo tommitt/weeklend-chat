@@ -6,3 +6,8 @@ Prova con qualcos'altro!\
 MESSAGE_INVALID_QUERY = """\
 Non posso rispondere a questa domanda. Prova con qualcos'altro!\
 """
+
+MESSAGE_WELCOME = """\
+Ciao! 👋
+Vuoi conoscere eventi nella tua zona? Prova a chiedermi qualcosa!\
+"""
