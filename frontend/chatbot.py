@@ -29,5 +29,5 @@ def app() -> None:
             response = st.session_state["answerer"].run(prompt)
 
         with st.chat_message("assistant"):
-            st.markdown(response)
+            st.markdown(response.answer)
         st.session_state["messages"].append({"role": "assistant", "content": response})

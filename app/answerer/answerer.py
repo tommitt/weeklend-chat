@@ -13,6 +13,8 @@ from langchain.vectorstores import Chroma
 from app.answerer.messages import MESSAGE_INVALID_QUERY, MESSAGE_NOTHING_RELEVANT
 from app.answerer.prompts import PROMPT_CONTEXT_ANSWER, PROMPT_EXTRACT_FILTERS
 from app.constants import CHROMA_DIR, N_DOCS, OPENAI_API_KEY
+from app.db.enums import AnswerType
+from app.db.schemas import AnswerOutput
 from app.utils.datetime_utils import date_to_timestamp
 
 
@@ -162,14 +164,24 @@ class Answerer:
 
         return answer
 
-    def run(self, user_query: str) -> str:
+    def run(self, user_query: str) -> AnswerOutput:
         is_invalid, filter_kwargs = self.run_extract_filters(user_query=user_query)
         if is_invalid:
-            return MESSAGE_INVALID_QUERY
+            return AnswerOutput(answer=MESSAGE_INVALID_QUERY, type=AnswerType.blocked)
 
         relevant_docs = self.db.similarity_search(user_query, k=N_DOCS, **filter_kwargs)
 
         if not len(relevant_docs):
-            return MESSAGE_NOTHING_RELEVANT
+            return AnswerOutput(
+                answer=MESSAGE_NOTHING_RELEVANT, type=AnswerType.template
+            )
         else:
-            return self.run_generate_answer(user_query=user_query, docs=relevant_docs)
+            return AnswerOutput(
+                answer=self.run_generate_answer(
+                    user_query=user_query, docs=relevant_docs
+                ),
+                type=AnswerType.ai,
+                used_event_ids=[
+                    relevant_docs[i].metadata["id"] for i in range(len(relevant_docs))
+                ],
+            )

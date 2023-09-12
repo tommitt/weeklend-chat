@@ -2,11 +2,12 @@ import datetime
 
 from pydantic import BaseModel
 
-from app.db.enums import CityEnum
+from app.db.enums import AnswerType, CityEnum
 
 
 class User(BaseModel):
     phone_number: str
+    is_blocked: bool
 
 
 class UserInDB(User):
@@ -21,7 +22,7 @@ class Conversation(BaseModel):
     user_id: int
     from_message: str
     to_message: str
-    is_blocked: bool
+    answer_type: AnswerType
     used_event_ids: str
     received_at: datetime.datetime
 
@@ -71,3 +72,9 @@ class EventInDb(Event):
 class WebhookPayload(BaseModel):
     entry: list
     object: str
+
+
+class AnswerOutput(BaseModel):
+    answer: str | None
+    type: AnswerType
+    used_event_ids: list[int] | None = None

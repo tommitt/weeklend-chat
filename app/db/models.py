@@ -5,7 +5,7 @@ from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.db import Base
-from app.db.enums import CityEnum
+from app.db.enums import AnswerType, CityEnum
 
 
 class UserORM(Base):
@@ -13,6 +13,7 @@ class UserORM(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     phone_number: Mapped[str] = mapped_column(index=True)
+    is_blocked: Mapped[bool]
     registered_at: Mapped[datetime.datetime]
 
     conversations: Mapped[list["ConversationORM"]] = relationship(back_populates="user")
@@ -28,7 +29,7 @@ class ConversationORM(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
     from_message: Mapped[str]
     to_message: Mapped[Optional[str]]
-    is_blocked: Mapped[bool]
+    answer_type: Mapped[AnswerType]
     used_event_ids: Mapped[str]  # json.dumps(list[ForeignKey("events.id")]))
     received_at: Mapped[datetime.datetime]
     registered_at: Mapped[datetime.datetime]
