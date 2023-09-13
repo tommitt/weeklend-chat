@@ -58,8 +58,8 @@ async def handle_get_request(request: Request):
     if not hub_mode or not hub_challenge or not hub_verify_token:
         raise HTTPException(status_code=400, detail="Missing query parameters.")
 
-    if hub_verify_token == WHATSAPP_HOOK_TOKEN:
-        return hub_challenge
+    if hub_mode == "subscribe" and hub_verify_token == WHATSAPP_HOOK_TOKEN:
+        return int(hub_challenge)
 
     raise HTTPException(status_code=401, detail="Authentication failed. Invalid Token.")
 
