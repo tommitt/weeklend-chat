@@ -1,7 +1,7 @@
 import datetime
 import json
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.requests import Request
 from sqlalchemy.orm import Session
 
@@ -56,12 +56,18 @@ async def handle_get_request(request: Request):
     hub_verify_token = request.query_params.get("hub.verify_token")
 
     if not hub_mode or not hub_challenge or not hub_verify_token:
-        raise HTTPException(status_code=400, detail="Missing query parameters.")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Missing query parameters.",
+        )
 
     if hub_mode == "subscribe" and hub_verify_token == WHATSAPP_HOOK_TOKEN:
         return int(hub_challenge)
 
-    raise HTTPException(status_code=401, detail="Authentication failed. Invalid Token.")
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Authentication failed. Invalid Token.",
+    )
 
 
 def check_user_limit(db: Session, user_id: int) -> AnswerOutput | None:
@@ -96,21 +102,22 @@ async def handle_post_request(
     try:
         whatsapp_client = WhatsappWrapper()
 
-        try:
-            message = payload.entry[0]["changes"][0]["value"]["messages"][0]
-        except:
-            raise HTTPException(
-                status_code=400, detail="No message present in request."
+        payload_value = payload.entry[0]["changes"][0]["value"]
+        if "messages" not in payload_value:
+            return Response(
+                content="Not answering - request is not a message.",
+                status_code=status.HTTP_200_OK,
             )
 
+        message = payload_value["messages"][0]
         if "type" not in message or message["type"] != "text":
-            return {
-                "status_code": 200,
-                "content": "Not answered: message type is not text",
-            }
+            return Response(
+                content="Not answering - message type is not text.",
+                status_code=status.HTTP_200_OK,
+            )
 
         phone_number = message["from"]
-        timestamp = message["timestamp"]
+        timestamp = int(message["timestamp"])
         message_body = message["text"]["body"]
 
         # db: register user
@@ -142,10 +149,15 @@ async def handle_post_request(
 
         # whatsapp: send answer
         if output.answer is not None:
-            response = whatsapp_client.send_message(
+            wa_response = whatsapp_client.send_message(
                 to_phone_number=phone_number,
                 message=output.answer,
             )
+            if wa_response.status_code != status.HTTP_200_OK:
+                raise HTTPException(
+                    status_code=wa_response.status_code,
+                    detail="Answer failed to be sent.",
+                )
 
         # db: register conversation
         db_conversation = register_conversation(
@@ -155,12 +167,21 @@ async def handle_post_request(
                 to_message=output.answer,
                 answer_type=output.type,
                 used_event_ids=json.dumps(output.used_event_ids),
-                received_at=datetime.datetime.fromtimestamp(timestamp),
+                received_at=datetime.datetime.utcfromtimestamp(timestamp),
             ),
             db=db,
         )
 
-        return {"status_code": response.status_code, "content": response.text}
+        return Response(
+            content="OK - correctly answered.",
+            status_code=status.HTTP_200_OK,
+        )
 
-    except:
-        raise HTTPException(status_code=500, detail="Something went wrong.")
+    except HTTPException as e:
+        raise e
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Something went wrong - {e}",
+        )
