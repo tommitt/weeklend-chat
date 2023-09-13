@@ -53,12 +53,14 @@ class Event(BaseModel):
     is_during_day: bool
     is_during_night: bool
     is_countryside: bool
+    is_for_children: bool | None
+    is_for_disabled: bool | None
+    is_for_animals: bool | None
 
     # additional info
-    location: str
-    url: str
-    opening_time: str
-    closing_time: str
+    name: str
+    location: str | None
+    url: str | None
 
 
 class EventInDb(Event):
