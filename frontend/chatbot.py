@@ -30,4 +30,6 @@ def app() -> None:
 
         with st.chat_message("assistant"):
             st.markdown(response.answer)
-        st.session_state["messages"].append({"role": "assistant", "content": response})
+        st.session_state["messages"].append(
+            {"role": "assistant", "content": response.answer}
+        )

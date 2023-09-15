@@ -14,11 +14,13 @@ Cosa ne dici di provare con una nuova ricerca? Sarà divertente! 😊🎉\
 """
 
 MESSAGE_INVALID_QUERY = f"""\
-Alcune domande sono fuori dal mio campo d'azione, e questa è una di quelle. 💔
-Prova con qualcosa di diverso per scoprire i migliori eventi nella tua zona!
+Mi dispiace, ma sembra che il tipo di richiesta che hai fatto non sia adatto alle mie capacità \
+di suggerire eventi e attività. 🙁
 
-Inoltre, ricorda che siamo in fase beta e ciò significa che imponiamo un limite di {LIMIT_BLOCKS_PER_WEEK} messaggi non validi alla settimana. \
-Quindi, scegli attentamente la prossima domanda in modo da poter continuare a esplorare insieme fino alla fine della settimana! 😄📅
+Inoltre, ricorda che siamo in fase beta e ciò significa che imponiamo un limite di \
+{LIMIT_BLOCKS_PER_WEEK} messaggi non validi alla settimana. \
+Quindi, scegli attentamente la prossima domanda in modo da poter continuare a \
+esplorare insieme fino alla fine della settimana! 😄📅
 """
 
 MESSAGE_WEEK_ANSWERS_LIMIT = """\
