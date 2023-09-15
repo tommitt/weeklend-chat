@@ -201,7 +201,7 @@ async def handle_post_request(
 
         db_user = get_user(db, phone_number=phone_number)
         if db_user is None:
-            output, db_user = new_user_journey(db=db)
+            output, db_user = new_user_journey(db=db, phone_number=phone_number)
         else:
             if db_user.is_blocked:
                 output = blocked_user_journey(db=db, db_user=db_user)
