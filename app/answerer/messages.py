@@ -1,4 +1,4 @@
-from app.constants import LIMIT_ANSWERS_PER_WEEK, LIMIT_BLOCKS_PER_WEEK
+from app.constants import LIMIT_BLOCKS_PER_WEEK
 
 MESSAGE_WELCOME = """\
 Ciao! 👋 È un piacere conoscerti!
@@ -21,16 +21,18 @@ Inoltre, ricorda che siamo in fase beta e ciò significa che imponiamo un limite
 Quindi, scegli attentamente la prossima domanda in modo da poter continuare a esplorare insieme fino alla fine della settimana! 😄📅
 """
 
-MESSAGE_WEEK_ANSWERS_LIMIT = f"""\
+MESSAGE_WEEK_ANSWERS_LIMIT = """\
 Grazie mille per usare Weeklend così assiduamente!
-Siamo in fase di beta e al momento possiamo accettare solo {LIMIT_ANSWERS_PER_WEEK} richieste a settimana, \
+Siamo in fase di beta e al momento possiamo accettare solo {limit_per_week} richieste a settimana, \
 ma stiamo lavorando duramente per ampliare la nostra portata e poter rispondere a tutte le richieste. \
-Sarà presto ancora più facile e divertente pianificare le tue attività. Restiamo in contatto! 😊📆\
+Sarà presto ancora più facile e divertente pianificare le tue attività. Restiamo in contatto! 😊📆
+
+Il blocco scadrà in data: {block_expires_at}\
 """
 
-MESSAGE_WEEK_BLOCKS_LIMIT = f"""\
-Oh no! Sembra che tu abbia raggiunto il limite di {LIMIT_BLOCKS_PER_WEEK} messaggi non validi per questa settimana.
-Non ti preoccupare, tornerò presto con nuove domande e suggerimenti una volta che il limite sarà scaduto. \
+MESSAGE_WEEK_BLOCKS_LIMIT = """\
+Oh no! Sembra che tu abbia raggiunto il limite di {limit_per_week} messaggi non validi per questa settimana.
+Non ti preoccupare, tornerò in data {block_expires_at} con nuovi suggerimenti per te. \
 Ci vediamo presto! 😊🕒\
 """
 
@@ -40,4 +42,10 @@ Siamo felici di vedere tanta richiesta, ma al momento abbiamo raggiunto il limit
 Ma non disperare! Stiamo lavorando duramente per aprire presto a nuovi utenti \
 e darti la possibilità di scoprire fantastici eventi.
 Resta con noi, torneremo presto con nuove opportunità! 🎉\
+"""
+
+MESSAGE_GOT_UNBLOCKED = """\
+Che bello rivederti! \
+Posso nuovamente rispondere alle tue domande e cercare le migliori opzioni per te! \
+Avanti, cosa vorresti chiedermi oggi? 😄🎉\
 """

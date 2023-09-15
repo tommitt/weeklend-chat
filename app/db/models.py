@@ -14,6 +14,7 @@ class UserORM(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     phone_number: Mapped[str] = mapped_column(index=True)
     is_blocked: Mapped[bool]
+    block_expires_at: Mapped[Optional[datetime.datetime]]
     registered_at: Mapped[datetime.datetime]
 
     conversations: Mapped[list["ConversationORM"]] = relationship(back_populates="user")

@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.answerer.answerer import Answerer
 from app.answerer.messages import (
+    MESSAGE_GOT_UNBLOCKED,
     MESSAGE_REACHED_MAX_USERS,
     MESSAGE_WEEK_ANSWERS_LIMIT,
     MESSAGE_WEEK_BLOCKS_LIMIT,
@@ -21,13 +22,16 @@ from app.constants import (
 )
 from app.db.db import get_db
 from app.db.enums import AnswerType
+from app.db.models import UserORM
 from app.db.schemas import AnswerOutput, Conversation, User, WebhookPayload
 from app.db.services import (
+    block_user,
     get_user,
     get_user_answers_count,
     get_user_count,
     register_conversation,
     register_user,
+    unblock_user,
 )
 
 webhook = APIRouter()
@@ -70,28 +74,102 @@ async def handle_get_request(request: Request):
     )
 
 
-def check_user_limit(db: Session, user_id: int) -> AnswerOutput | None:
-    datetime_limit = datetime.datetime.utcnow() - datetime.timedelta(days=7)
+def blocked_user_journey(db: Session, db_user: UserORM) -> AnswerOutput:
+    if (
+        db_user.block_expires_at is not None
+        and db_user.block_expires_at < datetime.datetime.utcnow()
+    ):
+        db_user = unblock_user(db=db, db_user=db_user)
+        return AnswerOutput(answer=MESSAGE_GOT_UNBLOCKED, type=AnswerType.template)
 
-    count_answers = get_user_answers_count(
-        db=db,
-        user_id=user_id,
-        answer_type=AnswerType.ai,
-        datetime_limit=datetime_limit,
-    )
-    if count_answers >= LIMIT_ANSWERS_PER_WEEK:
-        return AnswerOutput(answer=MESSAGE_WEEK_ANSWERS_LIMIT, type=AnswerType.template)
+    return AnswerOutput(answer=None, type=AnswerType.unanswered)
 
-    count_blocks = get_user_answers_count(
-        db=db,
-        user_id=user_id,
-        answer_type=AnswerType.blocked,
-        datetime_limit=datetime_limit,
+
+def new_user_journey(db: Session, phone_number: str) -> tuple[AnswerOutput, UserORM]:
+    num_users = get_user_count(db=db)
+    if num_users > LIMIT_MAX_USERS:
+        new_user_answer = MESSAGE_REACHED_MAX_USERS
+        is_blocked = True
+    else:
+        new_user_answer = MESSAGE_WELCOME
+        is_blocked = False
+
+    db_user = register_user(
+        user_in=User(phone_number=phone_number, is_blocked=is_blocked), db=db
     )
-    if count_blocks >= LIMIT_BLOCKS_PER_WEEK:
-        return AnswerOutput(answer=MESSAGE_WEEK_BLOCKS_LIMIT, type=AnswerType.template)
+    output = AnswerOutput(answer=new_user_answer, type=AnswerType.template)
+
+    return output, db_user
+
+
+def check_user_limit_by_answertype(
+    db: Session,
+    db_user: UserORM,
+    answer_type: AnswerType,
+    timedelta: datetime.timedelta,
+    limit: int,
+    block_message: str,
+) -> AnswerOutput | None:
+    count, first_datetime = get_user_answers_count(
+        db=db,
+        user_id=db_user.id,
+        answer_type=answer_type,
+        datetime_limit=(datetime.datetime.utcnow() - timedelta),
+    )
+
+    if count >= limit:
+        block_expires_at = first_datetime + timedelta
+        db_user = block_user(db=db, db_user=db_user, block_expires_at=block_expires_at)
+        return AnswerOutput(
+            answer=block_message.format(
+                limit_per_week=limit,
+                block_expires_at=block_expires_at.strftime("%d/%m/%Y"),
+            ),
+            type=AnswerType.template,
+        )
 
     return None
+
+
+def check_user_limits(db: Session, db_user: UserORM) -> AnswerOutput | None:
+    timedelta = datetime.timedelta(days=7)
+
+    output = check_user_limit_by_answertype(
+        db=db,
+        db_user=db_user,
+        answer_type=AnswerType.ai,
+        timedelta=timedelta,
+        limit=LIMIT_ANSWERS_PER_WEEK,
+        block_message=MESSAGE_WEEK_ANSWERS_LIMIT,
+    )
+    if output is not None:
+        return output
+
+    output = check_user_limit_by_answertype(
+        db=db,
+        db_user=db_user,
+        answer_type=AnswerType.blocked,
+        timedelta=timedelta,
+        limit=LIMIT_BLOCKS_PER_WEEK,
+        block_message=MESSAGE_WEEK_BLOCKS_LIMIT,
+    )
+    if output is not None:
+        return output
+
+    return output
+
+
+def standard_user_journey(
+    db: Session, db_user: UserORM, user_query: str
+) -> AnswerOutput:
+    output = check_user_limits(db=db, db_user=db_user)
+
+    if output is None:
+        # get llm answer
+        agent = Answerer()
+        output = agent.run(user_query)
+
+    return output
 
 
 @webhook.post("/webhooks")
@@ -116,38 +194,22 @@ async def handle_post_request(
                 status_code=status.HTTP_200_OK,
             )
 
+        # start user journey
         phone_number = message["from"]
         timestamp = int(message["timestamp"])
         message_body = message["text"]["body"]
 
-        # db: register user
         db_user = get_user(db, phone_number=phone_number)
         if db_user is None:
-            num_users = get_user_count(db=db)
-            if num_users > LIMIT_MAX_USERS:
-                new_user_answer = MESSAGE_REACHED_MAX_USERS
-                is_blocked = True
-            else:
-                new_user_answer = MESSAGE_WELCOME
-                is_blocked = False
-
-            db_user = register_user(
-                user_in=User(phone_number=phone_number, is_blocked=is_blocked), db=db
-            )
-            output = AnswerOutput(answer=new_user_answer, type=AnswerType.template)
-
+            output, db_user = new_user_journey(db=db)
         else:
             if db_user.is_blocked:
-                output = AnswerOutput(answer=None, type=AnswerType.unanswered)
+                output = blocked_user_journey(db=db, db_user=db_user)
             else:
-                output = check_user_limit(db=db, user_id=db_user.id)
+                output = standard_user_journey(
+                    db=db, db_user=db_user, user_query=message_body
+                )
 
-                if output is None:
-                    # llm: get answer
-                    agent = Answerer()
-                    output = agent.run(message_body)
-
-        # whatsapp: send answer
         if output.answer is not None:
             wa_response = whatsapp_client.send_message(
                 to_phone_number=phone_number,
@@ -159,7 +221,6 @@ async def handle_post_request(
                     detail="Answer failed to be sent.",
                 )
 
-        # db: register conversation
         db_conversation = register_conversation(
             conversation_in=Conversation(
                 user_id=db_user.id,

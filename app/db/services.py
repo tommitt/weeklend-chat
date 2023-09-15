@@ -22,9 +22,10 @@ def get_user_answers_count(
     user_id: int,
     answer_type: AnswerType | None,
     datetime_limit: datetime.datetime | None,
-) -> int:
+) -> tuple[int, datetime.datetime | None]:
     return (
-        db.query(func.count(ConversationORM.id))
+        db.query(func.count(), func.min(ConversationORM.registered_at))
+        .select_from(ConversationORM)
         .filter(
             ConversationORM.user_id == user_id,
             (
@@ -38,8 +39,27 @@ def get_user_answers_count(
                 else True
             ),
         )
-        .scalar()
-    )
+    ).first()
+
+
+def block_user(
+    db: Session, db_user: UserORM, block_expires_at: datetime.datetime
+) -> UserORM:
+    if db_user.is_blocked:
+        raise Exception("User is already blocked")
+    db_user.is_blocked = True
+    db_user.block_expires_at = block_expires_at
+    db.commit()
+    return db_user
+
+
+def unblock_user(db: Session, db_user: UserORM) -> UserORM:
+    if not db_user.is_blocked:
+        raise Exception("User is already unblocked")
+    db_user.is_blocked = False
+    db_user.block_expires_at = None
+    db.commit()
+    return db_user
 
 
 def register_user(user_in: User, db: Session) -> UserORM:

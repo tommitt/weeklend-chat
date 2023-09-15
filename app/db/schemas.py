@@ -8,6 +8,7 @@ from app.db.enums import AnswerType, CityEnum
 class User(BaseModel):
     phone_number: str
     is_blocked: bool
+    block_expires_at: datetime.datetime | None = None
 
 
 class UserInDB(User):
@@ -21,7 +22,7 @@ class UserInDB(User):
 class Conversation(BaseModel):
     user_id: int
     from_message: str
-    to_message: str
+    to_message: str | None
     answer_type: AnswerType
     used_event_ids: str
     received_at: datetime.datetime
