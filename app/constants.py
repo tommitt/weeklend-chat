@@ -1,14 +1,13 @@
 # mutable
 N_DOCS = 3
 
+LIMIT_MAX_USERS = 500
+LIMIT_ANSWERS_PER_WEEK = 3
+LIMIT_BLOCKS_PER_WEEK = 3
+
 # non-mutable
 SQLALCHEMY_DATABASE_URL = "sqlite:///./data/test.db"
 CHROMA_DIR = "data/chroma/"
-DB_PATH = "data/guidatorino_db.csv"
-
-LIMIT_MAX_USERS = 500
-LIMIT_ANSWERS_PER_WEEK = 3
-LIMIT_BLOCKS_PER_WEEK = 5
 
 TIMESTAMP_ORIGIN = "2023-01-01"
 

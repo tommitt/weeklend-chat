@@ -90,9 +90,21 @@ def register_conversation(
     return db_conversation
 
 
-def register_event(event_in: Event, db: Session) -> EventORM:
+def get_event(db: Session, source: str, url: str | None) -> EventORM | None:
+    return (
+        db.query(EventORM)
+        .filter(
+            EventORM.source == source,
+            EventORM.url == url if url is not None else True,
+        )
+        .first()
+    )
+
+
+def register_event(event_in: Event, source: str, db: Session) -> EventORM:
     event_dict = event_in.dict()
     event_dict["registered_at"] = datetime.datetime.utcnow()
+    event_dict["source"] = source
 
     db_event = EventORM(**event_dict)
     db.add(db_event)

@@ -30,6 +30,8 @@ async def register_new_conversation(
 
 
 @db_router.post("/register_new_event", response_model=EventInDb)
-async def register_new_event(event_in: Event, db: Session = Depends(get_db)):
-    db_event = register_event(event_in, db)
+async def register_new_event(
+    event_in: Event, source: str, db: Session = Depends(get_db)
+):
+    db_event = register_event(event_in, source, db)
     return db_event

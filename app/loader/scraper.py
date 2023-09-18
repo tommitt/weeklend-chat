@@ -1,54 +1,23 @@
 import datetime
 
-import pandas as pd
 import requests
 from bs4 import BeautifulSoup
+from sqlalchemy.orm import Session
+from tenacity import retry, stop_after_attempt
+
+from app.db.enums import CityEnum
+from app.db.schemas import Event
+from app.db.services import get_event, register_event
 
 
 class BaseScraper:
-    _closed_days_cols = [
-        "is_closed_mon",
-        "is_closed_tue",
-        "is_closed_wed",
-        "is_closed_thu",
-        "is_closed_fri",
-        "is_closed_sat",
-        "is_closed_sun",
-    ]
-
-    _full_cols = (
-        [
-            "description",
-            "city",
-            "start_date",
-            "end_date",
-        ]
-        + _closed_days_cols
-        + [
-            "is_during_day",
-            "is_during_night",
-            "location",
-            "url",
-            "opening_time",
-            "closing_time",
-        ]
-    )
-
-    def __init__(self) -> None:
-        self.identifier = "base"
-        self.df: pd.DataFrame = pd.DataFrame()
-
-    def create_timing_flags(self) -> None:
-        self.df["is_during_day"] = (
-            self.df["opening_time"].str.split(":", expand=True)[0].astype(int) <= 18
-        )
-        self.df["is_during_night"] = (
-            self.df["closing_time"].str.split(":", expand=True)[0].astype(int) >= 20
-        )
-
-    def save_db(self) -> None:
-        # self.df["id"] = TODO
-        self.df[self._full_cols].to_csv(f"data/{self.identifier}_db.csv", index=False)
+    def get_timing_flags(
+        self, opening_time: str, closing_time: str
+    ) -> tuple[bool, bool]:
+        """Format is expected to be 'HH:MM'"""
+        is_during_day = int(opening_time.split(":")[0]) <= 18
+        is_during_night = int(closing_time.split(":")[0]) >= 20
+        return is_during_day, is_during_night
 
 
 class GuidatorinoScraper(BaseScraper):
@@ -70,36 +39,24 @@ class GuidatorinoScraper(BaseScraper):
     def __init__(self) -> None:
         self.identifier: str = "guidatorino"
         self.root_url: str = "https://www.guidatorino.com/eventi-torino/"
+        self.events_list: list[dict] = []
+        self.output: list[Event] = []
 
-    def run(self) -> None:
-        print(f"Starting scraper for {self.identifier}")
-
+    def run_root_page(self) -> None:
         response = requests.get(self.root_url)
         soup = BeautifulSoup(response.content)
-
-        output = {
-            "title": [],
-            "description": [],
-            "start_date": [],
-            "end_date": [],
-            "city": [],
-            "location": [],
-            "url": [],
-            "opening_time": [],
-            "closing_time": [],
-        }
 
         events = (
             soup.find("table", {"class": "events-table"}).find("tbody").find_all("tr")
         )
-        n_events = len(events)
 
         for event in events:
+            event_dict = {}
             content = event.find("div", {"class", "eventlist-2"})
             sub_contents = content.find_all("p")
 
-            output["url"].append(content.find("h3").find("a")["href"])
-            output["title"].append(content.find("h3").find("a").text)
+            event_dict["url"] = content.find("h3").find("a")["href"]
+            event_dict["title"] = content.find("h3").find("a").text
 
             dates = [
                 datetime.datetime.strptime(d.replace(key, val), "%d-%m-%Y").date()
@@ -109,8 +66,8 @@ class GuidatorinoScraper(BaseScraper):
                 for key, val in self._MONTHS_CONVERSION.items()
                 if key in d
             ]
-            output["start_date"].append(dates[0])
-            output["end_date"].append(dates[0] if len(dates) == 1 else dates[1])
+            event_dict["start_date"] = dates[0]
+            event_dict["end_date"] = dates[0] if len(dates) == 1 else dates[1]
 
             timing = (
                 sub_contents[0]
@@ -118,8 +75,10 @@ class GuidatorinoScraper(BaseScraper):
                 .text.strip("Orario:  ")
                 .split(" - ")
             )
-            output["opening_time"].append(timing[0])
-            output["closing_time"].append(timing[1])
+            (
+                event_dict["is_during_day"],
+                event_dict["is_during_night"],
+            ) = self.get_timing_flags(opening_time=timing[0], closing_time=timing[1])
 
             city = sub_contents[1].find("span", {"class": "evento-citta"}).text
             address = sub_contents[1].find("span", {"class": "evento-indirizzo"}).text
@@ -129,18 +88,27 @@ class GuidatorinoScraper(BaseScraper):
                 if (city == place) and (city == address)
                 else " - ".join([place, address, city])
             )
-            output["city"].append(city)
-            output["location"].append(location)
+            event_dict["city"] = CityEnum.Torino
+            event_dict["location"] = location
+            event_dict["is_countryside"] = city != CityEnum.Torino
 
-        for i in range(n_events):
-            print(f"{i+1}/{n_events}")
+            self.events_list.append(event_dict)
 
-            event_response = requests.get(output["url"][i])
+        print(f"Got {len(self.events_list)} to be scraped.")
+
+    @retry(stop=stop_after_attempt(3))
+    def run_event_pages(self) -> None:
+        run_events_list = self.events_list.copy()
+        print(f"Running {len(run_events_list)} pages")
+        for i, event_dict in enumerate(run_events_list):
+            print(f"{i+1}/{len(run_events_list)}")
+
+            event_response = requests.get(event_dict["url"])
             event_soup = BeautifulSoup(event_response.content, "html.parser")
 
             text_containers = event_soup.find("div", {"class": "testo"}).find_all("p")
 
-            texts = [output["title"][i]]
+            texts = [event_dict["title"]]
             for t in text_containers:
                 text = t.text
                 if text == "\xa0":
@@ -151,10 +119,77 @@ class GuidatorinoScraper(BaseScraper):
                     break
                 texts.append(text)
 
-            output["description"].append("\n".join(texts))
+            description = "\n".join(texts)
 
-        for col in self._closed_days_cols:
-            output[col] = [False] * n_events
-        output.pop("title", None)
+            # save output
+            self.output.append(
+                Event(
+                    description=description,
+                    is_vectorized=False,
+                    # metadata
+                    city=event_dict["city"],
+                    start_date=event_dict["start_date"],
+                    end_date=event_dict["end_date"],
+                    is_closed_mon=False,
+                    is_closed_tue=False,
+                    is_closed_wed=False,
+                    is_closed_thu=False,
+                    is_closed_fri=False,
+                    is_closed_sat=False,
+                    is_closed_sun=False,
+                    is_during_day=event_dict["is_during_day"],
+                    is_during_night=event_dict["is_during_night"],
+                    is_countryside=event_dict["is_countryside"],
+                    is_for_children=None,
+                    is_for_disabled=None,
+                    is_for_animals=None,
+                    # additional info
+                    name=event_dict["title"],
+                    location=event_dict["location"],
+                    url=event_dict["url"],
+                )
+            )
+            self.events_list.remove(event_dict)
 
-        self.df = pd.DataFrame(output)
+    def run(self) -> None:
+        self.run_root_page()
+        self.run_event_pages()
+
+
+class Scraper:
+    _supported_sources = {
+        "guidatorino": GuidatorinoScraper,
+    }
+
+    def __init__(self, identifier: str, db: Session) -> None:
+        self.identifier = identifier
+        self.source = "webscraper_" + identifier
+        self.set_scraper()
+        self.db = db
+
+    def set_scraper(self) -> None:
+        if self.identifier not in self._supported_sources:
+            raise Exception(
+                f"Scraper with identifier {self.identifier} is not supported."
+            )
+
+        self.scraper = self._supported_sources[self.identifier]()
+
+    def update_db(self) -> int:
+        counter = 0
+        for event in self.scraper.output:
+            db_event = get_event(db=self.db, source=self.source, url=event.url)
+            if db_event is None:
+                db_event = register_event(
+                    event_in=event, source=self.source, db=self.db
+                )
+                counter += 1
+
+        self.db.commit()
+        return counter
+
+    def run(self) -> None:
+        print(f"Starting scraper for {self.identifier}.")
+        self.scraper.run()
+        num_inserted_events = self.update_db()
+        print(f"Inserted {num_inserted_events} new events.")

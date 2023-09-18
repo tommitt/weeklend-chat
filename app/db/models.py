@@ -47,6 +47,7 @@ class EventORM(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     description: Mapped[str]
     is_vectorized: Mapped[bool]
+    source: Mapped[str]
     registered_at: Mapped[datetime.datetime]
 
     # metadata

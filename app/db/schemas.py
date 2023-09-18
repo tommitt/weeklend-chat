@@ -3,6 +3,8 @@ import datetime
 from pydantic import BaseModel
 
 from app.db.enums import AnswerType, CityEnum
+from app.db.models import EventORM
+from app.utils.datetime_utils import date_to_timestamp
 
 
 class User(BaseModel):
@@ -66,10 +68,51 @@ class Event(BaseModel):
 
 class EventInDb(Event):
     id: int
+    source: str
     registered_at: datetime.datetime
 
     class Config:
         orm_mode = True
+
+
+class EventInVectorDB(BaseModel):
+    id: int
+    source: str
+
+    # metadata
+    city: CityEnum
+    start_date: datetime.date | int
+    end_date: datetime.date | int
+    is_closed_mon: bool
+    is_closed_tue: bool
+    is_closed_wed: bool
+    is_closed_thu: bool
+    is_closed_fri: bool
+    is_closed_sat: bool
+    is_closed_sun: bool
+    is_during_day: bool
+    is_during_night: bool
+    is_countryside: bool
+    is_for_children: bool | None
+    is_for_disabled: bool | None
+    is_for_animals: bool | None
+
+    # additional info
+    name: str
+    location: str | None
+    url: str | None
+
+    class Config:
+        orm_mode = True
+
+    def from_event_orm(orm: EventORM) -> "EventInVectorDB":
+        event = EventInVectorDB.from_orm(orm)
+
+        # convert datetime to int
+        event.start_date = date_to_timestamp(event.start_date)
+        event.end_date = date_to_timestamp(event.end_date)
+
+        return event
 
 
 class WebhookPayload(BaseModel):
