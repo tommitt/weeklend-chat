@@ -29,7 +29,7 @@ class Answerer:
 
         self.translator = ChromaTranslator()
 
-    def run_extract_filters(self, user_query: str) -> tuple[bool, dict]:
+    def run_extract_filters(self, user_query: str) -> tuple[bool, bool, dict]:
         """Self-query to extract filters for later retrieval"""
         today_date = datetime.date.today()
 
@@ -42,6 +42,11 @@ class Answerer:
                 ResponseSchema(
                     name="query_is_invalid",
                     description="This tells if the query is invalid. Output True if it is invalid, False otherwise.",
+                    type="boolean",
+                ),
+                ResponseSchema(
+                    name="query_needs_recommendations",
+                    description="This tells if the query needs recommendations or not. Output True if it needs them, False otherwise.",
                     type="boolean",
                 ),
                 ResponseSchema(
@@ -105,7 +110,11 @@ class Answerer:
             )
         )
 
-        return response["query_is_invalid"], filter_kwargs
+        return (
+            response["query_is_invalid"],
+            response["query_needs_recommendations"],
+            filter_kwargs,
+        )
 
     def run_generate_answer(self, user_query: str, docs: list[Document]) -> str:
         prompt = ChatPromptTemplate.from_template(
@@ -165,9 +174,15 @@ class Answerer:
         return answer
 
     def run(self, user_query: str) -> AnswerOutput:
-        is_invalid, filter_kwargs = self.run_extract_filters(user_query=user_query)
+        is_invalid, needs_recommendations, filter_kwargs = self.run_extract_filters(
+            user_query=user_query
+        )
+
         if is_invalid:
             return AnswerOutput(answer=MESSAGE_INVALID_QUERY, type=AnswerType.blocked)
+
+        if not needs_recommendations:
+            return AnswerOutput(answer=None, type=AnswerType.unanswered)
 
         relevant_docs = self.db.similarity_search(user_query, k=N_DOCS, **filter_kwargs)
 

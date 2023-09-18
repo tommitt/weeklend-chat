@@ -17,10 +17,10 @@ MESSAGE_INVALID_QUERY = f"""\
 Mi dispiace, ma sembra che il tipo di richiesta che hai fatto non sia adatto alle mie capacità \
 di suggerire eventi e attività. 🙁
 
-Inoltre, ricorda che siamo in fase beta e ciò significa che imponiamo un limite di \
+Ricorda che siamo in fase beta e ciò significa che imponiamo un limite di \
 {LIMIT_BLOCKS_PER_WEEK} messaggi non validi alla settimana. \
 Quindi, scegli attentamente la prossima domanda in modo da poter continuare a \
-esplorare insieme fino alla fine della settimana! 😄📅
+esplorare insieme fino alla fine della settimana! 😄📅\
 """
 
 MESSAGE_WEEK_ANSWERS_LIMIT = """\

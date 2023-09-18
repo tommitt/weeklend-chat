@@ -14,6 +14,10 @@ including but not limited to drugs, prostitution, racism, violence, \
 or any form of hate speech, misogyny, or discrimination. \
 Queries that violate these common laws and ethical principles should be marked as invalid.
 
+Does the query need recommendations? \
+You should extract whether the query needs an answer or not \
+with recommended events, activities or places. \
+
 Does the query refers to a specific date or date range? \
 You should extract the start and end of the range. \
 Both start and end must be inclusive in the range. \
