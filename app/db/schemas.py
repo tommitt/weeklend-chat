@@ -24,6 +24,7 @@ class UserInDB(User):
 class Conversation(BaseModel):
     user_id: int
     from_message: str
+    wa_id: str
     to_message: str | None
     answer_type: AnswerType
     used_event_ids: str

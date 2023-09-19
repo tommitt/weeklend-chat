@@ -29,6 +29,7 @@ class ConversationORM(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
     from_message: Mapped[str]
+    wa_id: Mapped[str] = mapped_column(index=True)  # format: "wamid.ID"
     to_message: Mapped[Optional[str]]
     answer_type: Mapped[AnswerType]
     used_event_ids: Mapped[str]  # json.dumps(list[ForeignKey("events.id")]))

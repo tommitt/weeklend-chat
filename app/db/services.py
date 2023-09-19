@@ -77,6 +77,10 @@ def register_user(user_in: User, db: Session) -> UserORM:
     return db_user
 
 
+def get_conversation(db: Session, wa_id: str) -> ConversationORM | None:
+    return db.query(ConversationORM).filter(ConversationORM.wa_id == wa_id).first()
+
+
 def register_conversation(
     conversation_in: Conversation, db: Session
 ) -> ConversationORM:

@@ -26,6 +26,7 @@ from app.db.models import UserORM
 from app.db.schemas import AnswerOutput, Conversation, User, WebhookPayload
 from app.db.services import (
     block_user,
+    get_conversation,
     get_user,
     get_user_answers_count,
     get_user_count,
@@ -194,11 +195,20 @@ async def handle_post_request(
                 status_code=status.HTTP_200_OK,
             )
 
-        # start user journey
+        # read message
         phone_number = message["from"]
+        wa_id = message["id"]
         timestamp = int(message["timestamp"])
         message_body = message["text"]["body"]
 
+        db_conversation = get_conversation(db=db, wa_id=wa_id)
+        if db_conversation is not None:
+            return Response(
+                content="Not answering - message already processed.",
+                status_code=status.HTTP_200_OK,
+            )
+
+        # start user journey
         db_user = get_user(db, phone_number=phone_number)
         if db_user is None:
             output, db_user = new_user_journey(db=db, phone_number=phone_number)
@@ -225,6 +235,7 @@ async def handle_post_request(
             conversation_in=Conversation(
                 user_id=db_user.id,
                 from_message=message_body,
+                wa_id=wa_id,
                 to_message=output.answer,
                 answer_type=output.type,
                 used_event_ids=json.dumps(output.used_event_ids),
@@ -234,8 +245,7 @@ async def handle_post_request(
         )
 
         return Response(
-            content="OK - correctly answered.",
-            status_code=status.HTTP_200_OK,
+            content="OK - correctly answered.", status_code=status.HTTP_200_OK
         )
 
     except HTTPException as e:
