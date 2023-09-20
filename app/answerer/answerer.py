@@ -11,7 +11,16 @@ from langchain.retrievers.self_query.chroma import ChromaTranslator
 from langchain.vectorstores import Chroma
 
 from app.answerer.messages import MESSAGE_INVALID_QUERY, MESSAGE_NOTHING_RELEVANT
-from app.answerer.prompts import PROMPT_CONTEXT_ANSWER, PROMPT_EXTRACT_FILTERS
+from app.answerer.prompts import (
+    PROMPT_CONTEXT_ANSWER,
+    PROMPT_EXTRACT_FILTERS,
+    RSCHEMA_ANSWER_EVENT_SUMMARY,
+    RSCHEMA_ANSWER_INTRO,
+    RSCHEMA_EXTRACT_DATE,
+    RSCHEMA_EXTRACT_INVALID,
+    RSCHEMA_EXTRACT_RECOMMENDATIONS,
+    RSCHEMA_EXTRACT_TIME,
+)
 from app.constants import CHROMA_DIR, N_DOCS, OPENAI_API_KEY
 from app.db.enums import AnswerType
 from app.db.schemas import AnswerOutput
@@ -33,34 +42,29 @@ class Answerer:
         """Self-query to extract filters for later retrieval"""
         today_date = datetime.date.today()
 
-        prompt = ChatPromptTemplate.from_template(
-            template=PROMPT_EXTRACT_FILTERS + "\n\n{format_instructions}"
-        )
+        prompt = ChatPromptTemplate.from_template(template=PROMPT_EXTRACT_FILTERS)
 
         output_parser = StructuredOutputParser.from_response_schemas(
             [
                 ResponseSchema(
                     name="query_is_invalid",
-                    description="This tells if the query is invalid. Output True if it is invalid, False otherwise.",
+                    description=RSCHEMA_EXTRACT_INVALID,
                     type="boolean",
                 ),
                 ResponseSchema(
                     name="query_needs_recommendations",
-                    description="This tells if the query needs recommendations or not. Output True if it needs them, False otherwise.",
+                    description=RSCHEMA_EXTRACT_RECOMMENDATIONS,
                     type="boolean",
                 ),
                 ResponseSchema(
                     name="query_start_date",
-                    description='This is the start of the range in format "YYYY-MM-DD". If this information is not found, output "NO_DATE".',
+                    description=RSCHEMA_EXTRACT_DATE.format(start_end="start"),
                 ),
                 ResponseSchema(
                     name="query_end_date",
-                    description='This is the end of the range in format "YYYY-MM-DD". If this information is not found, output "NO_DATE".',
+                    description=RSCHEMA_EXTRACT_DATE.format(start_end="end"),
                 ),
-                ResponseSchema(
-                    name="query_time",
-                    description='This is the time of the day. It can be either "daytime", "nighttime" or "both".',
-                ),
+                ResponseSchema(name="query_time", description=RSCHEMA_EXTRACT_TIME),
             ]
         )
 
@@ -117,29 +121,16 @@ class Answerer:
         )
 
     def run_generate_answer(self, user_query: str, docs: list[Document]) -> str:
-        prompt = ChatPromptTemplate.from_template(
-            template=PROMPT_CONTEXT_ANSWER + "\n\n{format_instructions}"
-        )
+        prompt = ChatPromptTemplate.from_template(template=PROMPT_CONTEXT_ANSWER)
 
         output_parser = StructuredOutputParser.from_response_schemas(
-            [
-                ResponseSchema(
-                    name="intro",
-                    description="This is your intro to the message.",
-                )
-            ]
+            [ResponseSchema(name="intro", description=RSCHEMA_ANSWER_INTRO)]
             + [
                 ResponseSchema(
                     name=f"event_summary_{i+1}",
-                    description=f"This is a long summary of event number {i+1}.",
+                    description=RSCHEMA_ANSWER_EVENT_SUMMARY.format(number=i + 1),
                 )
                 for i in range(len(docs))
-            ]
-            + [
-                ResponseSchema(
-                    name="outro",
-                    description="This is your outro to the message. This must include a commentary on the relevance of the given events to the user's question. It can also be an empty string.",
-                )
             ]
         )
 
@@ -148,7 +139,7 @@ class Answerer:
                 context="\n\n".join(
                     [f"{i+1}. ```{doc.page_content}```" for i, doc in enumerate(docs)]
                 ),
-                question=user_query,
+                user_query=user_query,
                 k=len(docs),
                 format_instructions=output_parser.get_format_instructions(),
             )
@@ -168,7 +159,6 @@ class Answerer:
                 + (f'\n🌐 {docs[i].metadata["url"]}' if docs[i].metadata["url"] else "")
                 for i in range(len(docs))
             ]
-            + [response["outro"]]
         )
 
         return answer
