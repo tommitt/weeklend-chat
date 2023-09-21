@@ -2,13 +2,9 @@ import datetime
 import logging
 
 from langchain.chains.query_constructor.ir import Comparison, Operation, StructuredQuery
-from langchain.chat_models import ChatOpenAI
 from langchain.docstore.document import Document
-from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.output_parsers import ResponseSchema, StructuredOutputParser
 from langchain.prompts import ChatPromptTemplate
-from langchain.retrievers.self_query.chroma import ChromaTranslator
-from langchain.vectorstores import Chroma
 
 from app.answerer.messages import MESSAGE_INVALID_QUERY, MESSAGE_NOTHING_RELEVANT
 from app.answerer.prompts import (
@@ -21,22 +17,18 @@ from app.answerer.prompts import (
     RSCHEMA_EXTRACT_RECOMMENDATIONS,
     RSCHEMA_EXTRACT_TIME,
 )
-from app.constants import CHROMA_DIR, N_DOCS, OPENAI_API_KEY
+from app.constants import N_DOCS
 from app.db.enums import AnswerType
 from app.db.schemas import AnswerOutput
+from app.utils.conn import get_llm, get_vectorstore, get_vectorstore_translator
 from app.utils.datetime_utils import date_to_timestamp
 
 
 class Answerer:
     def __init__(self) -> None:
-        self.llm = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0)
-
-        self.db = Chroma(
-            persist_directory=CHROMA_DIR,
-            embedding_function=OpenAIEmbeddings(openai_api_key=OPENAI_API_KEY),
-        )
-
-        self.translator = ChromaTranslator()
+        self.llm = get_llm()
+        self.vectorstore = get_vectorstore()
+        self.vectorstore_translator = get_vectorstore_translator()
 
     def run_extract_filters(self, user_query: str) -> tuple[bool, bool, dict]:
         """Self-query to extract filters for later retrieval"""
@@ -108,7 +100,7 @@ class Answerer:
                 Comparison(comparator="eq", attribute="is_during_night", value=True)
             )
 
-        _, filter_kwargs = self.translator.visit_structured_query(
+        _, filter_kwargs = self.vectorstore_translator.visit_structured_query(
             structured_query=StructuredQuery(
                 query=user_query, filter=Operation(operator="and", arguments=filters)
             )
@@ -174,7 +166,9 @@ class Answerer:
         if not needs_recommendations:
             return AnswerOutput(answer=None, type=AnswerType.unanswered)
 
-        relevant_docs = self.db.similarity_search(user_query, k=N_DOCS, **filter_kwargs)
+        relevant_docs = self.vectorstore.similarity_search(
+            user_query, k=N_DOCS, **filter_kwargs
+        )
 
         if not len(relevant_docs):
             return AnswerOutput(

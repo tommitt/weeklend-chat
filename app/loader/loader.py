@@ -1,28 +1,15 @@
-import chromadb
 from langchain.docstore.document import Document
-from langchain.embeddings.openai import OpenAIEmbeddings
-from langchain.vectorstores import Chroma
 from sqlalchemy.orm import Session
 
-from app.constants import CHROMA_DIR, OPENAI_API_KEY
 from app.db.models import EventORM
 from app.db.schemas import EventInVectorDB
+from app.utils.conn import get_vectorstore
 
 
 class Loader:
     def __init__(self, db: Session) -> None:
         self.db = db
-
-        self.vectorstore = Chroma(
-            client=chromadb.PersistentClient(path=CHROMA_DIR),
-            embedding_function=OpenAIEmbeddings(openai_api_key=OPENAI_API_KEY),
-        )
-        # self.vectorstore = PGVector(
-        #     collection_name=COLLECTION_NAME,
-        #     connection_string=CONNECTION_STRING,
-        #     embedding_function=embeddings,
-        # )
-
+        self.vectorstore = get_vectorstore()
         self.events: list[EventORM] = []
 
     def get_not_vectorized_events(self) -> None:
