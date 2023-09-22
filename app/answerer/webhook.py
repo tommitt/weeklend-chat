@@ -167,7 +167,7 @@ def standard_user_journey(
 
     if output is None:
         # get llm answer
-        agent = Answerer()
+        agent = Answerer(db=db)
         output = agent.run(user_query)
 
     return output
