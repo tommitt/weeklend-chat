@@ -1,6 +1,7 @@
 import streamlit as st
 
 from app.answerer.answerer import Answerer
+from app.db.db import SessionLocal
 
 
 def app() -> None:
@@ -14,7 +15,7 @@ def app() -> None:
                 "content": "Ciao Weeklender! 👋🏻\nVuoi consigli su cosa fare a Torino?",
             }
         ]
-        st.session_state["answerer"] = Answerer()
+        st.session_state["answerer"] = Answerer(db=SessionLocal())
 
     for message in st.session_state["messages"]:
         with st.chat_message(message["role"]):

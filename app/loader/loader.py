@@ -2,7 +2,7 @@ from langchain.docstore.document import Document
 from sqlalchemy.orm import Session
 
 from app.db.models import EventORM
-from app.db.schemas import EventInVectorDB
+from app.db.schemas import EventInVectorstore
 from app.utils.conn import get_vectorstore
 
 
@@ -20,9 +20,8 @@ class Loader:
         for event_orm in self.events:
             event_doc = Document(
                 page_content=event_orm.description,
-                metadata=EventInVectorDB.from_event_orm(event_orm).__dict__,
+                metadata=EventInVectorstore.from_event_orm(event_orm).__dict__,
             )
             self.vectorstore.add_documents([event_doc])
             event_orm.is_vectorized = True
-
-        self.db.commit()
+            self.db.commit()

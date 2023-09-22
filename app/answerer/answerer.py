@@ -5,6 +5,7 @@ from langchain.chains.query_constructor.ir import Comparison, Operation, Structu
 from langchain.docstore.document import Document
 from langchain.output_parsers import ResponseSchema, StructuredOutputParser
 from langchain.prompts import ChatPromptTemplate
+from sqlalchemy.orm import Session
 
 from app.answerer.messages import MESSAGE_INVALID_QUERY, MESSAGE_NOTHING_RELEVANT
 from app.answerer.prompts import (
@@ -20,12 +21,14 @@ from app.answerer.prompts import (
 from app.constants import N_DOCS
 from app.db.enums import AnswerType
 from app.db.schemas import AnswerOutput
+from app.db.services import get_event_by_id
 from app.utils.conn import get_llm, get_vectorstore, get_vectorstore_translator
 from app.utils.datetime_utils import date_to_timestamp
 
 
 class Answerer:
-    def __init__(self) -> None:
+    def __init__(self, db: Session) -> None:
+        self.db = db
         self.llm = get_llm()
         self.vectorstore = get_vectorstore()
         self.vectorstore_translator = get_vectorstore_translator()
@@ -138,22 +141,22 @@ class Answerer:
         )
         response = output_parser.parse(response_raw.content)
 
-        answer = "\n\n".join(
-            [response["intro"]]
-            + [
+        event_recommendations = []
+        for i, doc in enumerate(docs):
+            db_event = get_event_by_id(db=self.db, id=doc.metadata["id"])
+            if db_event is None:
+                raise Exception(
+                    f"Event in vectorstore is not present in db (id={doc.metadata['id']})."
+                )
+
+            event_recommendations.append(
                 f"{i+1}. "
                 + response[f"event_summary_{i+1}"]
-                + (
-                    f'\n📍 {docs[i].metadata["location"]}'
-                    if docs[i].metadata["location"]
-                    else ""
-                )
-                + (f'\n🌐 {docs[i].metadata["url"]}' if docs[i].metadata["url"] else "")
-                for i in range(len(docs))
-            ]
-        )
+                + (f"\n📍 {db_event.location}" if db_event.location is not None else "")
+                + (f"\n🌐 {db_event.url}" if db_event.url is not None else "")
+            )
 
-        return answer
+        return "\n\n".join([response["intro"]] + event_recommendations)
 
     def run(self, user_query: str) -> AnswerOutput:
         is_invalid, needs_recommendations, filter_kwargs = self.run_extract_filters(

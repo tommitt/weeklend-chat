@@ -94,6 +94,10 @@ def register_conversation(
     return db_conversation
 
 
+def get_event_by_id(db: Session, id: int) -> EventORM | None:
+    return db.query(EventORM).filter_by(id=id).first()
+
+
 def get_event(db: Session, source: str, url: str | None) -> EventORM | None:
     return (
         db.query(EventORM)

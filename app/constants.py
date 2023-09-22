@@ -7,8 +7,8 @@ LIMIT_BLOCKS_PER_WEEK = 3
 
 # non-mutable
 SQLALCHEMY_DATABASE_URL = "sqlite:///./data/test.db"
-CHROMA_DIR = "data/chroma/"
-
+PINECONE_INDEX = "weeklend-beta"
+PINECONE_NAMESPACE = "events"
 TIMESTAMP_ORIGIN = "2023-01-01"
 
 # from .env
@@ -25,3 +25,6 @@ openai.organization = os.environ["OPENAI_ORGANIZATION_ID"]
 WHATSAPP_API_TOKEN = os.environ.get("WHATSAPP_API_TOKEN")
 WHATSAPP_NUMBER_ID = os.environ.get("WHATSAPP_NUMBER_ID")
 WHATSAPP_HOOK_TOKEN = os.environ.get("WHATSAPP_HOOK_TOKEN")
+
+PINECONE_API_KEY = os.environ.get("PINECONE_API_KEY")
+PINECONE_ENV = os.environ.get("PINECONE_ENV")

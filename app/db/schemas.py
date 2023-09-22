@@ -57,12 +57,12 @@ class Event(BaseModel):
     is_during_day: bool
     is_during_night: bool
     is_countryside: bool
-    is_for_children: bool | None
-    is_for_disabled: bool | None
-    is_for_animals: bool | None
+    is_for_children: bool
+    is_for_disabled: bool
+    is_for_animals: bool
 
     # additional info
-    name: str
+    name: str | None
     location: str | None
     url: str | None
 
@@ -76,7 +76,7 @@ class EventInDb(Event):
         orm_mode = True
 
 
-class EventInVectorDB(BaseModel):
+class EventInVectorstore(BaseModel):
     id: int
     source: str
 
@@ -94,20 +94,15 @@ class EventInVectorDB(BaseModel):
     is_during_day: bool
     is_during_night: bool
     is_countryside: bool
-    is_for_children: bool | None
-    is_for_disabled: bool | None
-    is_for_animals: bool | None
-
-    # additional info
-    name: str
-    location: str | None
-    url: str | None
+    is_for_children: bool
+    is_for_disabled: bool
+    is_for_animals: bool
 
     class Config:
         orm_mode = True
 
-    def from_event_orm(orm: EventORM) -> "EventInVectorDB":
-        event = EventInVectorDB.from_orm(orm)
+    def from_event_orm(orm: EventORM) -> "EventInVectorstore":
+        event = EventInVectorstore.from_orm(orm)
 
         # convert datetime to int
         event.start_date = date_to_timestamp(event.start_date)

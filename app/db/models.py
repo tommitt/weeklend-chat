@@ -65,12 +65,12 @@ class EventORM(Base):
     is_during_day: Mapped[bool]
     is_during_night: Mapped[bool]
     is_countryside: Mapped[bool]
-    is_for_children: Mapped[Optional[bool]]
-    is_for_disabled: Mapped[Optional[bool]]
-    is_for_animals: Mapped[Optional[bool]]
+    is_for_children: Mapped[bool]
+    is_for_disabled: Mapped[bool]
+    is_for_animals: Mapped[bool]
 
     # additional info
-    name: Mapped[str]
+    name: Mapped[Optional[str]]
     location: Mapped[Optional[str]]
     url: Mapped[Optional[str]]
 

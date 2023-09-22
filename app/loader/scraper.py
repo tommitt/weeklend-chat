@@ -58,6 +58,13 @@ class GuidatorinoScraper(BaseScraper):
             event_dict["url"] = content.find("h3").find("a")["href"]
             event_dict["title"] = content.find("h3").find("a").text
 
+            categories = content.find("ul", {"class": "event-categories"})
+            event_dict["is_for_children"] = False
+            if categories is not None:
+                for cat in categories.find_all("li"):
+                    if cat.find("a").text == "Bambini":
+                        event_dict["is_for_children"] = True
+
             dates = [
                 datetime.datetime.strptime(d.replace(key, val), "%d-%m-%Y").date()
                 for d in sub_contents[0]
@@ -140,9 +147,9 @@ class GuidatorinoScraper(BaseScraper):
                     is_during_day=event_dict["is_during_day"],
                     is_during_night=event_dict["is_during_night"],
                     is_countryside=event_dict["is_countryside"],
-                    is_for_children=None,
-                    is_for_disabled=None,
-                    is_for_animals=None,
+                    is_for_children=event_dict["is_for_children"],
+                    is_for_disabled=False,
+                    is_for_animals=False,
                     # additional info
                     name=event_dict["title"],
                     location=event_dict["location"],
