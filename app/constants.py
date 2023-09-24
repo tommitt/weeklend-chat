@@ -6,7 +6,6 @@ LIMIT_ANSWERS_PER_WEEK = 3
 LIMIT_BLOCKS_PER_WEEK = 3
 
 # non-mutable
-SQLALCHEMY_DATABASE_URL = "sqlite:///./data/test.db"
 PINECONE_INDEX = "weeklend-beta"
 PINECONE_NAMESPACE = "events"
 TIMESTAMP_ORIGIN = "2023-01-01"
@@ -28,3 +27,13 @@ WHATSAPP_HOOK_TOKEN = os.environ.get("WHATSAPP_HOOK_TOKEN")
 
 PINECONE_API_KEY = os.environ.get("PINECONE_API_KEY")
 PINECONE_ENV = os.environ.get("PINECONE_ENV")
+
+SQLALCHEMY_DATABASE_URL = f"""\
+postgresql\
+://{os.environ.get("POSTGRES_USER")}\
+:{os.environ.get("POSTGRES_PASSWORD")}\
+@{os.environ.get("POSTGRES_HOST")}\
+:{os.environ.get("POSTGRES_PORT")}\
+/{os.environ.get("POSTGRES_DATABASE")}\
+"""
+# SQLALCHEMY_DATABASE_URL = "sqlite:///./data/test.db"
