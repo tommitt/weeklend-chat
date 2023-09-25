@@ -50,4 +50,7 @@ Scan the QR code and start chatting with the deployed version:
 <center><img src="assets/weeklend-wa-qr.png" width="120" height="120"></center>
 
 ## 💻 How can I use the code?
-Under the `frontend/` folder there are a few UIs built with [streamlit](https://github.com/streamlit/streamlit) that can be used to test different parts of the code.
+* The app main entry point sits at `app/main.py` and can be run with command: `uvicorn app.main:app`.
+* In the `frontend/` folder there are a few UIs built with *[streamlit](https://github.com/streamlit/streamlit)* that can be used to test different parts of the code:
+  * `frontend.chatbot:app`: a chatbot UI for chatting with the LLM connected to the vectorstore.
+  * `frontend.control_panel:app`: a simple UI for loading events to the vectorstore and running the web scrapers.

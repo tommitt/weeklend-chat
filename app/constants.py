@@ -6,8 +6,6 @@ LIMIT_ANSWERS_PER_WEEK = 3
 LIMIT_BLOCKS_PER_WEEK = 3
 
 # non-mutable
-PINECONE_INDEX = "weeklend-beta"
-PINECONE_NAMESPACE = "events"
 TIMESTAMP_ORIGIN = "2023-01-01"
 
 # from .env
@@ -27,6 +25,8 @@ WHATSAPP_HOOK_TOKEN = os.environ.get("WHATSAPP_HOOK_TOKEN")
 
 PINECONE_API_KEY = os.environ.get("PINECONE_API_KEY")
 PINECONE_ENV = os.environ.get("PINECONE_ENV")
+PINECONE_INDEX = os.environ.get("PINECONE_INDEX")
+PINECONE_NAMESPACE = os.environ.get("PINECONE_NAMESPACE")
 
 SQLALCHEMY_DATABASE_URL = f"""\
 postgresql\
