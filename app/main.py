@@ -7,10 +7,10 @@ app = FastAPI()
 app.include_router(webhook)
 
 
-@app.get("/test")
+@app.get("/")
 def main_endpoint_test():
-    return {"message": "Hello world! Weeklend is here."}
+    return {"message": "Hello world! Weeklend is here at main endpoint."}
 
 
 # for handling AWS lambda requests
-handler = Mangum(app)
+handler = Mangum(app, lifespan="off")
