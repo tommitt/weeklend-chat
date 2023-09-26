@@ -68,10 +68,6 @@ Respond by suggesting each event separately, \
 ensuring that you do not mix information from different events. \
 Base your answers solely on the provided descriptions and do not invent any additional details.
 
-Evaluate whether the provided events completely address the user's query. \
-If they do not, begin your answer with a note explaining to the user what information \
-is missing and then proceed to provide the recommendations.
-
 Respond in italian.
 ----------------
 {context}
@@ -82,10 +78,9 @@ User query: {user_query}
 """
 
 RSCHEMA_ANSWER_INTRO = """\
-This is your intro to the message. \
-It should introduce the summaries of recommended events. \
-If these events do not completely address the user's query, \
-it should contain an explanation note.\
+This is a brief introduction to the message. \
+If these events do not fully address the user's query, \
+explain to the user that they are not completely relevant.\
 """
 
 RSCHEMA_ANSWER_EVENT_SUMMARY = """\
