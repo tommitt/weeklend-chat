@@ -245,7 +245,8 @@ async def handle_post_request(
         )
 
         return Response(
-            content="OK - correctly answered.", status_code=status.HTTP_200_OK
+            content=f"OK - correctly answered with type: {output.type}.",
+            status_code=status.HTTP_200_OK,
         )
 
     except HTTPException as e:
