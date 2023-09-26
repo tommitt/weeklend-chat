@@ -11,6 +11,7 @@ class User(BaseModel):
     phone_number: str
     is_blocked: bool
     block_expires_at: datetime.datetime | None = None
+    is_admin: bool = False
 
 
 class UserInDB(User):

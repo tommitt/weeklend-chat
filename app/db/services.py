@@ -62,6 +62,13 @@ def unblock_user(db: Session, db_user: UserORM) -> UserORM:
     return db_user
 
 
+def set_admin_user(db: Session, db_user: UserORM) -> UserORM:
+    if db_user.is_blocked:
+        unblock_user(db=db, db_user=db_user)
+    db_user.is_admin = True
+    db.commit()
+
+
 def register_user(user_in: User, db: Session) -> UserORM:
     db_user = get_user(db, phone_number=user_in.phone_number)
     if db_user:

@@ -163,7 +163,7 @@ def check_user_limits(db: Session, db_user: UserORM) -> AnswerOutput | None:
 def standard_user_journey(
     db: Session, db_user: UserORM, user_query: str
 ) -> AnswerOutput:
-    output = check_user_limits(db=db, db_user=db_user)
+    output = check_user_limits(db=db, db_user=db_user) if not db_user.is_admin else None
 
     if output is None:
         # get llm answer
