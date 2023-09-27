@@ -1,0 +1,54 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [master]
+jobs:
+  continuous-integration:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout to repository
+        uses: actions/checkout@v4
+
+      - name: Set up python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.10
+          architecture: x64
+
+      - name: Install python virtual env
+        run: pip3 install virtualenv
+
+      - name: Cache requirements.txt file
+        uses: actions/cache@v3
+        id: cache-venv
+        with:
+          path: venv
+          key: ${{ runner.os }}-venv-${{ hashFiles('**/requirements*.txt') }}
+          restore-keys: ${{ runner.os }}-venv-
+
+      - name: Install dependencies into virtual env
+        run: python -m venv venv && source venv/bin/activate && pip3 install -r requirements.txt
+        if: steps.cache-venv.outputs.cache-hit != 'true'
+
+      - name: Run black linter
+        uses: psf/black@stable
+        with:
+          options: "--check --verbose"
+          src: "./app"
+
+      - name: Run tests
+        run: source venv/bin/activate && pytest
+
+      - name: Create zipfile of repo
+        run: zip -r9 api.zip ./app
+
+      - name: Upload zip file artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: api
+          path: api.zip
+
+  # continuous-deployment:
+  # .....
