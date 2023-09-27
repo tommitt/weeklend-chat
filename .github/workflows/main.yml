@@ -40,6 +40,21 @@ jobs:
 
       - name: Run tests
         run: source venv/bin/activate && pytest
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_ORGANIZATION_ID: ${{ secrets.OPENAI_ORGANIZATION_ID }}
+          PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
+          PINECONE_ENV: ${{ secrets.PINECONE_ENV }}
+          PINECONE_INDEX: ${{ secrets.PINECONE_INDEX }}
+          PINECONE_NAMESPACE: ${{ secrets.PINECONE_NAMESPACE }}
+          POSTGRES_HOST: ${{ secrets.POSTGRES_HOST }}
+          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          POSTGRES_DATABASE: ${{ secrets.POSTGRES_DATABASE }}
+          POSTGRES_PORT: ${{ secrets.POSTGRES_PORT }}
+          WHATSAPP_API_TOKEN: ${{ secrets.WHATSAPP_API_TOKEN }}
+          WHATSAPP_NUMBER_ID: ${{ secrets.WHATSAPP_NUMBER_ID }}
+          WHATSAPP_HOOK_TOKEN: ${{ secrets.WHATSAPP_HOOK_TOKEN }}
 
       - name: Create zipfile of repo
         run: zip -r9 api.zip ./app
