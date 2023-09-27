@@ -172,7 +172,10 @@ class Answerer:
         response_raw = self.llm(
             prompt.format_messages(
                 context="\n\n".join(
-                    [f"{i+1}. ```{doc.page_content}```" for i, doc in enumerate(docs)]
+                    [
+                        f"Event number {i+1}:\n```{doc.page_content}```"
+                        for i, doc in enumerate(docs)
+                    ]
                 ),
                 user_query=user_query,
                 k=len(docs),

@@ -64,9 +64,9 @@ The user is seeking recommendations for \
 events, activities, exhibitions, bars, restaurants or places to visit.
 
 You are provided with {k} event descriptions enclosed within triple backticks. \
+Base your answer solely on the provided descriptions and do not invent anything. \
 Respond by suggesting each event separately, \
-ensuring that you do not mix information from different events. \
-Base your answers solely on the provided descriptions and do not invent any additional details.
+ensuring that you do not mix information from different events.
 
 Respond in italian.
 ----------------
