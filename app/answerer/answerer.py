@@ -76,23 +76,63 @@ class Answerer:
             "\n".join([f"Filter {key}: {response[key]}" for key in response.keys()])
         )
 
-        if response["query_start_date"] == "NO_DATE":
-            response["query_start_date"] = today_date
-        if response["query_end_date"] == "NO_DATE":
-            response["query_end_date"] = today_date + datetime.timedelta(days=6)
+        start_date = (
+            today_date
+            if response["query_start_date"] == "NO_DATE"
+            else datetime.datetime.strptime(
+                response["query_start_date"], "%Y-%m-%d"
+            ).date()
+        )
+        end_date = (
+            today_date + datetime.timedelta(days=6)
+            if response["query_end_date"] == "NO_DATE"
+            else datetime.datetime.strptime(
+                response["query_end_date"], "%Y-%m-%d"
+            ).date()
+        )
 
         filters = [
             Comparison(
                 comparator="lte",
                 attribute="start_date",
-                value=date_to_timestamp(response["query_end_date"]),
+                value=date_to_timestamp(end_date),
             ),
             Comparison(
                 comparator="gte",
                 attribute="end_date",
-                value=date_to_timestamp(response["query_start_date"]),
+                value=date_to_timestamp(start_date),
             ),
         ]
+
+        # filter out events that are closed in the query's days of the week
+        # the code finds all days of the week in the given range
+        # it then adds a filter where the event must be open in at least one day in the range
+        # example: query is from Monday to Tuesday,
+        # the filter becomes: OR(NOT closed on Monday, NOT closed on Tuesday)
+        days_of_week_in_range = set(
+            [
+                (start_date + datetime.timedelta(days=i)).strftime("%A")
+                for i in range((end_date - start_date).days + 1)
+            ]
+        )
+
+        map_closed_days = {
+            "Monday": "is_closed_mon",
+            "Tuesday": "is_closed_tue",
+            "Wednesday": "is_closed_wed",
+            "Thursday": "is_closed_thu",
+            "Friday": "is_closed_fri",
+            "Saturday": "is_closed_sat",
+            "Sunday": "is_closed_sun",
+        }
+        filters_closed_days = []
+        for day_of_week, db_attribute in map_closed_days.items():
+            if day_of_week in days_of_week_in_range:
+                filters_closed_days.append(
+                    Comparison(comparator="eq", attribute=db_attribute, value=False)
+                )
+
+        filters.append(Operation(operator="or", arguments=filters_closed_days))
 
         if response["query_time"] == "daytime":
             filters.append(
