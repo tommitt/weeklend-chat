@@ -22,7 +22,7 @@ When a message is received, an LLM is used for:
 
 *Main dependencies: [langchain](https://github.com/langchain-ai/langchain), [openai](https://github.com/openai/openai-python)*
 
-**💾 SQL database**
+**💾 SQL Database**
 
 A SQL database is used for storing **users**, **conversations** and **events** information.
 
@@ -36,7 +36,7 @@ A vectorstore is used to store the embeddings associated to the events' descript
 
 ### Events data mining
 
-**🕷️ Web scraper**
+**🕷️ Web Scraper**
 
 A scraper has been developed to retrieve events from certain websites.
 
@@ -52,5 +52,13 @@ Scan the QR code and start chatting with the deployed version:
 ## 💻 How can I use the code?
 * The app main entry point sits at `app/main.py` and can be run with command: `uvicorn app.main:app`.
 * In the `frontend/` folder there are a few UIs built with *[streamlit](https://github.com/streamlit/streamlit)* that can be used to test different parts of the code:
-  * `frontend.chatbot:app`: a chatbot UI for chatting with the LLM connected to the vectorstore.
+  * `frontend.chatbot:app`: a chatbot UI for chatting with the LLM connected to the vectorstore;
   * `frontend.control_panel:app`: a simple UI for loading events to the vectorstore and running the web scrapers.
+* To run tests use the command: `pytest`
+
+## 🪂 How is it deployed?
+* The app is deployed as an AWS Lambda function - automatic deployment is enabled through GitHub Actions on every push to `master` branch, with a workflow that runs `black` linting and `pytest` tests before deploying the new version.
+* An AWS API Gateway ensures the webhook connection between the Lambda function and WhatsApp Cloud API.
+* The SQL database is hosted on AWS RDS.
+* The vectorstore is hosted on Pinecone.
+* The LLM is run by OpenAI and called through their API.
