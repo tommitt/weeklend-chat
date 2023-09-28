@@ -23,6 +23,11 @@ Quindi, scegli attentamente la prossima domanda in modo da poter continuare a \
 esplorare insieme fino alla fine della settimana! 😄📅\
 """
 
+MESSAGE_WAIT_FOR_ANSWER = """\
+Cerco subito le migliori esperienze per te, \
+torno in pochi secondi 🏃\
+"""
+
 MESSAGE_WEEK_ANSWERS_LIMIT = """\
 Grazie mille per usare Weeklend così assiduamente!
 Siamo in fase di beta e al momento possiamo accettare solo {limit_per_week} richieste a settimana, \

@@ -9,6 +9,7 @@ from app.answerer.answerer import Answerer
 from app.answerer.messages import (
     MESSAGE_GOT_UNBLOCKED,
     MESSAGE_REACHED_MAX_USERS,
+    MESSAGE_WAIT_FOR_ANSWER,
     MESSAGE_WEEK_ANSWERS_LIMIT,
     MESSAGE_WEEK_BLOCKS_LIMIT,
     MESSAGE_WELCOME,
@@ -161,12 +162,14 @@ def check_user_limits(db: Session, db_user: UserORM) -> AnswerOutput | None:
 
 
 def standard_user_journey(
-    db: Session, db_user: UserORM, user_query: str
+    db: Session, client: WhatsappWrapper, db_user: UserORM, user_query: str
 ) -> AnswerOutput:
     output = check_user_limits(db=db, db_user=db_user) if not db_user.is_admin else None
 
     if output is None:
-        # get llm answer
+        _ = client.send_message(
+            to_phone_number=db_user.phone_number, message=MESSAGE_WAIT_FOR_ANSWER
+        )
         agent = Answerer(db=db)
         output = agent.run(user_query)
 
@@ -179,8 +182,6 @@ async def handle_post_request(
     db: Session = Depends(get_db),
 ):
     try:
-        whatsapp_client = WhatsappWrapper()
-
         payload_value = payload.entry[0]["changes"][0]["value"]
         if "messages" not in payload_value:
             return Response(
@@ -209,6 +210,8 @@ async def handle_post_request(
             )
 
         # start user journey
+        whatsapp_client = WhatsappWrapper()
+
         db_user = get_user(db, phone_number=phone_number)
         if db_user is None:
             output, db_user = new_user_journey(db=db, phone_number=phone_number)
@@ -217,7 +220,10 @@ async def handle_post_request(
                 output = blocked_user_journey(db=db, db_user=db_user)
             else:
                 output = standard_user_journey(
-                    db=db, db_user=db_user, user_query=message_body
+                    db=db,
+                    client=whatsapp_client,
+                    db_user=db_user,
+                    user_query=message_body,
                 )
 
         if output.answer is not None:
