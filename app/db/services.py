@@ -89,6 +89,12 @@ def get_conversation(db: Session, wa_id: str) -> ConversationORM | None:
     return db.query(ConversationORM).filter(ConversationORM.wa_id == wa_id).first()
 
 
+def delete_temp_conversation(db: Session, db_conversation: ConversationORM) -> None:
+    if db_conversation.user_id == -1:
+        db.delete(db_conversation)
+        db.commit()
+
+
 def register_conversation(
     conversation_in: Conversation, db: Session
 ) -> ConversationORM:

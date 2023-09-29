@@ -27,6 +27,7 @@ from app.db.models import UserORM
 from app.db.schemas import AnswerOutput, Conversation, User, WebhookPayload
 from app.db.services import (
     block_user,
+    delete_temp_conversation,
     get_conversation,
     get_user,
     get_user_answers_count,
@@ -158,7 +159,7 @@ def check_user_limits(db: Session, db_user: UserORM) -> AnswerOutput | None:
     if output is not None:
         return output
 
-    return output
+    return None
 
 
 def standard_user_journey(
@@ -208,6 +209,21 @@ async def handle_post_request(
                 content="Not answering - message already processed.",
                 status_code=status.HTTP_200_OK,
             )
+        # conversation is registered early to avoid accepting a request with
+        # the same message while it is being processed
+        db_conversation = register_conversation(
+            conversation_in=Conversation(
+                from_message=message_body,
+                wa_id=wa_id,
+                received_at=datetime.datetime.utcfromtimestamp(timestamp),
+                # temporary values ->
+                user_id=-1,
+                to_message=None,
+                answer_type=AnswerType.unanswered,
+                used_event_ids="null",
+            ),
+            db=db,
+        )
 
         # start user journey
         whatsapp_client = WhatsappWrapper()
@@ -237,28 +253,25 @@ async def handle_post_request(
                     detail="Answer failed to be sent.",
                 )
 
-        db_conversation = register_conversation(
-            conversation_in=Conversation(
-                user_id=db_user.id,
-                from_message=message_body,
-                wa_id=wa_id,
-                to_message=output.answer,
-                answer_type=output.type,
-                used_event_ids=json.dumps(output.used_event_ids),
-                received_at=datetime.datetime.utcfromtimestamp(timestamp),
-            ),
-            db=db,
-        )
+        # update conversation on db
+        db_conversation.user_id = db_user.id
+        db_conversation.to_message = output.answer
+        db_conversation.answer_type = output.type
+        db_conversation.used_event_ids = json.dumps(output.used_event_ids)
+        db.commit()
 
         return Response(
             content=f"OK - correctly answered with type: {output.type}.",
             status_code=status.HTTP_200_OK,
         )
 
-    except HTTPException as e:
-        raise e
-
     except Exception as e:
+        if db_conversation:
+            delete_temp_conversation(db=db, db_conversation=db_conversation)
+
+        if type(e) == HTTPException:
+            raise e
+
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Something went wrong - {e}",
