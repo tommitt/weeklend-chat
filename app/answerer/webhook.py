@@ -24,7 +24,13 @@ from app.constants import (
 from app.db.db import get_db
 from app.db.enums import AnswerType
 from app.db.models import UserORM
-from app.db.schemas import AnswerOutput, Conversation, User, WebhookPayload
+from app.db.schemas import (
+    AnswerOutput,
+    ConversationTemp,
+    ConversationUpd,
+    User,
+    WebhookPayload,
+)
 from app.db.services import (
     block_user,
     delete_temp_conversation,
@@ -32,9 +38,10 @@ from app.db.services import (
     get_user,
     get_user_answers_count,
     get_user_count,
-    register_conversation,
+    register_temp_conversation,
     register_user,
     unblock_user,
+    update_temp_conversation,
 )
 
 webhook = APIRouter()
@@ -98,7 +105,7 @@ def new_user_journey(db: Session, phone_number: str) -> tuple[AnswerOutput, User
         is_blocked = False
 
     db_user = register_user(
-        user_in=User(phone_number=phone_number, is_blocked=is_blocked), db=db
+        db=db, user_in=User(phone_number=phone_number, is_blocked=is_blocked)
     )
     output = AnswerOutput(answer=new_user_answer, type=AnswerType.template)
 
@@ -209,20 +216,13 @@ async def handle_post_request(
                 content="Not answering - message already processed.",
                 status_code=status.HTTP_200_OK,
             )
-        # conversation is registered early to avoid accepting a request with
-        # the same message while it is being processed
-        db_conversation = register_conversation(
-            conversation_in=Conversation(
+        db_conversation = register_temp_conversation(
+            db=db,
+            conversation_temp_in=ConversationTemp(
                 from_message=message_body,
                 wa_id=wa_id,
                 received_at=datetime.datetime.utcfromtimestamp(timestamp),
-                # temporary values ->
-                user_id=-1,
-                to_message=None,
-                answer_type=AnswerType.unanswered,
-                used_event_ids="null",
             ),
-            db=db,
         )
 
         # start user journey
@@ -253,12 +253,16 @@ async def handle_post_request(
                     detail="Answer failed to be sent.",
                 )
 
-        # update conversation on db
-        db_conversation.user_id = db_user.id
-        db_conversation.to_message = output.answer
-        db_conversation.answer_type = output.type
-        db_conversation.used_event_ids = json.dumps(output.used_event_ids)
-        db.commit()
+        db_conversation = update_temp_conversation(
+            db=db,
+            db_conversation=db_conversation,
+            conversation_update_in=ConversationUpd(
+                user_id=db_user.id,
+                to_message=output.answer,
+                answer_type=output.type,
+                used_event_ids=json.dumps(output.used_event_ids),
+            ),
+        )
 
         return Response(
             content=f"OK - correctly answered with type: {output.type}.",

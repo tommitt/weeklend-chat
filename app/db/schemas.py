@@ -22,14 +22,21 @@ class UserInDB(User):
         orm_mode = True
 
 
-class Conversation(BaseModel):
-    user_id: int
-    wa_id: str
+class ConversationTemp(BaseModel):
     from_message: str
+    wa_id: str
+    received_at: datetime.datetime
+
+
+class ConversationUpd(BaseModel):
+    user_id: int
     to_message: str | None
     answer_type: AnswerType
     used_event_ids: str
-    received_at: datetime.datetime
+
+
+class Conversation(ConversationTemp, ConversationUpd):
+    pass
 
 
 class ConversationInDb(Conversation):

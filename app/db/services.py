@@ -4,9 +4,15 @@ from fastapi import HTTPException
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from app.constants import FAKE_USER_ID
 from app.db.enums import AnswerType
 from app.db.models import ConversationORM, EventORM, UserORM
-from app.db.schemas import Conversation, Event, User
+from app.db.schemas import Conversation, ConversationTemp, ConversationUpd, Event, User
+
+
+# User
+def get_user_by_id(db: Session, id: int) -> UserORM | None:
+    return db.query(UserORM).filter_by(id=id).first()
 
 
 def get_user(db: Session, phone_number: str) -> UserORM | None:
@@ -70,7 +76,7 @@ def set_admin_user(db: Session, db_user: UserORM) -> UserORM:
     return db_user
 
 
-def register_user(user_in: User, db: Session) -> UserORM:
+def register_user(db: Session, user_in: User) -> UserORM:
     db_user = get_user(db, phone_number=user_in.phone_number)
     if db_user:
         raise HTTPException(status_code=400, detail="Phone number already registered")
@@ -85,18 +91,13 @@ def register_user(user_in: User, db: Session) -> UserORM:
     return db_user
 
 
+# Conversation
 def get_conversation(db: Session, wa_id: str) -> ConversationORM | None:
     return db.query(ConversationORM).filter(ConversationORM.wa_id == wa_id).first()
 
 
-def delete_temp_conversation(db: Session, db_conversation: ConversationORM) -> None:
-    if db_conversation.user_id == -1:
-        db.delete(db_conversation)
-        db.commit()
-
-
 def register_conversation(
-    conversation_in: Conversation, db: Session
+    db: Session, conversation_in: Conversation
 ) -> ConversationORM:
     conversation_dict = conversation_in.dict()
     conversation_dict["registered_at"] = datetime.datetime.utcnow()
@@ -108,6 +109,59 @@ def register_conversation(
     return db_conversation
 
 
+def register_temp_conversation(
+    db: Session, conversation_temp_in: ConversationTemp
+) -> ConversationORM:
+    """
+    Conversation is registered temporarily without no answer to avoid
+    accepting a request with the same message while it is being processed.
+    """
+    fake_user = get_user_by_id(db=db, id=FAKE_USER_ID)
+    if fake_user is None:
+        fake_user = UserORM(
+            id=FAKE_USER_ID,
+            phone_number="000000000000",
+            is_blocked=False,
+            is_admin=False,
+            registered_at=datetime.datetime.utcnow(),
+        )
+        db.add(fake_user)
+        db.commit()
+
+    db_conversation = register_conversation(
+        conversation_in=Conversation(
+            from_message=conversation_temp_in.from_message,
+            wa_id=conversation_temp_in.wa_id,
+            received_at=conversation_temp_in.received_at,
+            # temporary values ->
+            user_id=FAKE_USER_ID,
+            to_message=None,
+            answer_type=AnswerType.unanswered,
+            used_event_ids="null",
+        ),
+        db=db,
+    )
+    return db_conversation
+
+
+def update_temp_conversation(
+    db: Session,
+    db_conversation: ConversationORM,
+    conversation_update_in: ConversationUpd,
+) -> ConversationORM:
+    for attr_name, attr_value in vars(conversation_update_in).items():
+        setattr(db_conversation, attr_name, attr_value)
+    db.commit()
+    return db_conversation
+
+
+def delete_temp_conversation(db: Session, db_conversation: ConversationORM) -> None:
+    if db_conversation.user_id == FAKE_USER_ID:
+        db.delete(db_conversation)
+        db.commit()
+
+
+# Event
 def get_event_by_id(db: Session, id: int) -> EventORM | None:
     return db.query(EventORM).filter_by(id=id).first()
 
@@ -123,7 +177,7 @@ def get_event(db: Session, source: str, url: str | None) -> EventORM | None:
     )
 
 
-def register_event(event_in: Event, source: str, db: Session) -> EventORM:
+def register_event(db: Session, event_in: Event, source: str) -> EventORM:
     event_dict = event_in.dict()
     event_dict["registered_at"] = datetime.datetime.utcnow()
     event_dict["source"] = source

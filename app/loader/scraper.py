@@ -188,7 +188,7 @@ class Scraper:
             db_event = get_event(db=self.db, source=self.source, url=event.url)
             if db_event is None:
                 db_event = register_event(
-                    event_in=event, source=self.source, db=self.db
+                    db=self.db, event_in=event, source=self.source
                 )
                 counter += 1
 

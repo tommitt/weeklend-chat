@@ -7,6 +7,7 @@ LIMIT_MAX_USERS = 500
 
 # non-mutable
 TIMESTAMP_ORIGIN = "2023-01-01"
+FAKE_USER_ID = -1
 
 # from .env
 import os
