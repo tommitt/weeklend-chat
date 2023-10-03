@@ -23,9 +23,14 @@ Quindi, scegli attentamente la prossima domanda in modo da poter continuare a \
 esplorare insieme fino alla fine della settimana! 😄📅\
 """
 
+MESSAGE_ANSWER_NOT_NEEDED = """\
+Sembra che il tuo messaggio non richieda una risposta specifica. \
+Tuttavia, sono qui per te, quindi non esitare a chiedermi consigli su attività e eventi in qualsiasi momento! \
+Sarà un piacere aiutarti a trovare le migliori opzioni per il tuo tempo libero. 😊🎉\
+"""
+
 MESSAGE_WAIT_FOR_ANSWER = """\
-Cerco subito le migliori esperienze per te, \
-torno in pochi secondi 🏃\
+Sto pensando... torno in pochi secondi 🏃\
 """
 
 MESSAGE_WEEK_ANSWERS_LIMIT = """\

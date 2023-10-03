@@ -7,7 +7,11 @@ from langchain.output_parsers import ResponseSchema, StructuredOutputParser
 from langchain.prompts import ChatPromptTemplate
 from sqlalchemy.orm import Session
 
-from app.answerer.messages import MESSAGE_INVALID_QUERY, MESSAGE_NOTHING_RELEVANT
+from app.answerer.messages import (
+    MESSAGE_ANSWER_NOT_NEEDED,
+    MESSAGE_INVALID_QUERY,
+    MESSAGE_NOTHING_RELEVANT,
+)
 from app.answerer.prompts import (
     PROMPT_CONTEXT_ANSWER,
     PROMPT_EXTRACT_FILTERS,
@@ -210,7 +214,9 @@ class Answerer:
             return AnswerOutput(answer=MESSAGE_INVALID_QUERY, type=AnswerType.blocked)
 
         if not needs_recommendations:
-            return AnswerOutput(answer=None, type=AnswerType.unanswered)
+            return AnswerOutput(
+                answer=MESSAGE_ANSWER_NOT_NEEDED, type=AnswerType.template
+            )
 
         relevant_docs = self.vectorstore.similarity_search(
             user_query, k=N_DOCS, **filter_kwargs
