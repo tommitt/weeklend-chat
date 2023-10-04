@@ -44,7 +44,7 @@ class GuidatorinoScraper(BaseScraper):
 
     def run_root_page(self) -> None:
         response = requests.get(self.root_url)
-        soup = BeautifulSoup(response.content)
+        soup = BeautifulSoup(response.content, "html.parser")
 
         events = (
             soup.find("table", {"class": "events-table"}).find("tbody").find_all("tr")
