@@ -2,9 +2,12 @@ from app.constants import LIMIT_BLOCKS_PER_WEEK
 
 MESSAGE_WELCOME = """\
 Ciao! 👋 È un piacere conoscerti!
-Ti trovi su Weeklend, il posto giusto per scoprire eventi e attività a Torino. \
-Dimmi pure in chat che tipo di evento stai cercando e, se hai una data specifica in mente, \
-fammelo sapere. Sono qui per aiutarti a trovare le migliori opzioni per te! 💪🎉\
+
+Io sono Weeklend, l'AI che ti consiglia cosa fare nel tempo libero. \
+Chiedimi in chat che tipo di evento o attività stai cercando.
+
+Questa è una versione beta, e siamo attivi solamente a Torino e dintorni. \
+Avanti, troviamo le migliori esperienze per te! 💪🎉\
 """
 
 MESSAGE_NOTHING_RELEVANT = """\
