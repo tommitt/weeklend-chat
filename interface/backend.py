@@ -1,11 +1,14 @@
+import datetime
+
 from fastapi import Depends, FastAPI, status
 from sqlalchemy.orm import Session
 
 from app.answerer.answerer import Answerer
 from app.db.db import get_db
-from app.db.schemas import AnswerOutput
+from app.db.schemas import AnswerOutput, DashboardOutput
 from app.loader.loader import Loader
 from app.loader.scraper import Scraper
+from app.utils.dashboard import get_dashboard_stats
 
 FASTAPI_URL = "http://127.0.0.1:8000"  # default localhost
 
@@ -51,3 +54,11 @@ async def control_panel_api_loader_vectorize_events(db: Session = Depends(get_db
 
     agent.vectorize_events()
     return {"status": status.HTTP_200_OK, "detail": "Everything has been vectorized."}
+
+
+@app.post("/dashboard", response_model=DashboardOutput)
+async def dashboard_api(
+    start_date: datetime.date, end_date: datetime.date, db: Session = Depends(get_db)
+):
+    response = get_dashboard_stats(db=db, start_date=start_date, end_date=end_date)
+    return response
