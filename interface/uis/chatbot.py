@@ -1,6 +1,7 @@
 import requests
 import streamlit as st
 
+from app.db.schemas import AnswerOutput
 from interface.backend import FASTAPI_URL
 
 
@@ -29,10 +30,11 @@ def ui() -> None:
             response = requests.post(
                 f"{FASTAPI_URL}/chatbot",
                 params={"user_query": user_query},
-            ).json()
+            )
+            answer_out = AnswerOutput(**response.json())
 
         with st.chat_message("assistant"):
-            st.markdown(response["answer"])
+            st.markdown(answer_out.answer)
         st.session_state["messages"].append(
-            {"role": "assistant", "content": response["answer"]}
+            {"role": "assistant", "content": answer_out.answer}
         )
