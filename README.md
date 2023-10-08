@@ -51,9 +51,12 @@ Scan the QR code and start chatting with the deployed version:
 
 ## 💻 How can I use the code?
 * The app main entry point sits at `app/main.py` and can be run with command: `uvicorn app.main:app`.
-* In the `frontend/` folder there are a few UIs built with *[streamlit](https://github.com/streamlit/streamlit)* that can be used to test different parts of the code:
-  * `frontend.chatbot:app`: a chatbot UI for chatting with the LLM connected to the vectorstore;
-  * `frontend.control_panel:app`: a simple UI for loading events to the vectorstore and running the web scrapers.
+* In the `interface/` folder there are a few UIs built with *[streamlit](https://github.com/streamlit/streamlit)* that can be used to interact with different parts of the app:
+  * `interface.uis.chatbot:ui`: a chatbot UI for chatting with the LLM connected to the vectorstore;
+  * `interface.uis.control_panel:ui`: a simple UI for loading events to the vectorstore and running the web scrapers.
+* There is a main file controlling all UIs at `main_ui.py`, to use it:
+  * Activate the backend for the UIs with: `uvicorn interface.backend:app`;
+  * Run the streamlit frontend with: `streamlit run main_ui.py`.
 * To run tests use the command: `pytest`
 
 ## 🪂 How is it deployed?

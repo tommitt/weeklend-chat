@@ -163,11 +163,12 @@ class GuidatorinoScraper(BaseScraper):
         self.run_event_pages()
 
 
-class Scraper:
-    _supported_sources = {
-        "guidatorino": GuidatorinoScraper,
-    }
+SUPPORTED_SOURCES = {
+    "guidatorino": GuidatorinoScraper,
+}
 
+
+class Scraper:
     def __init__(self, identifier: str, db: Session) -> None:
         self.identifier = identifier
         self.source = "webscraper_" + identifier
@@ -175,12 +176,12 @@ class Scraper:
         self.db = db
 
     def set_scraper(self) -> None:
-        if self.identifier not in self._supported_sources:
+        if self.identifier not in SUPPORTED_SOURCES:
             raise Exception(
                 f"Scraper with identifier {self.identifier} is not supported."
             )
 
-        self.scraper = self._supported_sources[self.identifier]()
+        self.scraper = SUPPORTED_SOURCES[self.identifier]()
 
     def update_db(self) -> int:
         counter = 0
