@@ -55,16 +55,16 @@ def get_dashboard_stats(
     )
 
     answers_ai_count = next(
-        (v for k, v in convs_count_by_type if k == AnswerType.ai), None
+        (v for k, v in convs_count_by_type if k == AnswerType.ai), 0
     )
     answers_template_count = next(
-        (v for k, v in convs_count_by_type if k == AnswerType.template), None
+        (v for k, v in convs_count_by_type if k == AnswerType.template), 0
     )
     answers_blocked_count = next(
-        (v for k, v in convs_count_by_type if k == AnswerType.blocked), None
+        (v for k, v in convs_count_by_type if k == AnswerType.blocked), 0
     )
     answers_unanswered_count = next(
-        (v for k, v in convs_count_by_type if k == AnswerType.unanswered), None
+        (v for k, v in convs_count_by_type if k == AnswerType.unanswered), 0
     )
 
     convs_tot_count = (
