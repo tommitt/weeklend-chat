@@ -11,9 +11,11 @@ FILENAME = "data/weeklend_snap_gform.csv"
 SOURCE = "business-gform"
 DUMMY_START_DATE = datetime.date(2023, 1, 1)
 DUMMY_END_DATE = datetime.date(2033, 1, 1)
+DESCRIPTION_MIN_CHARS = 240
 
 df_full = pd.read_csv(FILENAME)
 db = SessionLocal()
+# TODO: integrate into FastAPI and control panel
 
 
 def yes_no_flag(string: str) -> bool:
@@ -30,35 +32,41 @@ def optional_column(string: str) -> str | None:
     return string.strip()
 
 
-col_exp_type = "Sei un locale o un evento?"
+col_exp_type = "Stai registrando un locale o un evento?"
 cols_map = {
     "Evento": {
-        "name": "Nome del tuo Evento",
-        "description": "Descrizione del tuo Evento",
+        "name": "Nome dell'Evento",
+        "description": "Descrizione dell'Evento",
+        "zone": "Indica in quale zona si trova l'evento",
+        "address": "Indirizzo dell'evento",
+        "place": "Nome della location",
+        "province": "Indica la provincia in cui si terrà l'evento",
         "start_date": "Data di inizio dell'evento ",
         "end_date": "Data di fine dell'evento ",
-        "location": "Indirizzo del tuo evento",
-        "province": "Provincia.1",
+        "opening_period": "È un evento principalmente diurno o principalmente notturno?",
         "closing_days": None,
-        "url": "Inserisci indirizzo web del tuo evento",
+        "price": "Qual è il prezzo medio per persona a questo evento?",
         "is_for_disabled": "Ingresso per disabili?",
         "is_for_children": "Esperienza adatta a famiglie e bambini?.1",
         "is_for_animals": "Ingresso consentito agli animali?.1",
-        "opening_period": "Sei un evento diurno o notturno?",
+        "url": "Inserisci l'indirizzo web legato all'evento che gli utenti riceveranno",
     },
     "Locale": {
-        "name": "Nome del tuo Locale",
-        "description": "Descrizione del tuo Locale",
+        "name": "Nome del Locale",
+        "description": "Descrizione del Locale",
+        "zone": "Indica in quale zona si trova il locale",
+        "address": "Indirizzo del locale ",
+        "place": None,
+        "province": "Indica la provincia del tuo locale",
         "start_date": None,
         "end_date": None,
-        "location": "Indirizzo del tuo locale ",
-        "province": "Provincia",
+        "opening_period": "Il locale è principalmente diurno o principalmente notturno?",
         "closing_days": "Giorno di chiusura settimanale ",
-        "url": "Inserisci indirizzo web del tuo locale",
+        "price": "Qual è il prezzo medio per persona in questo locale?",
         "is_for_disabled": "Ha Ingresso per disabili?",
         "is_for_children": "Esperienza adatta a famiglie e bambini?",
         "is_for_animals": "Ingresso consentito agli animali?",
-        "opening_period": "Sei un locale principalmente diurno o principalmente notturno?",
+        "url": "Inserisci l'indirizzo web legato al locale che gli utenti riceveranno",
     },
 }
 
@@ -74,14 +82,18 @@ map_closed_days = {
 
 counter = 0
 for exp_type in ["Locale", "Evento"]:
-    df = df_full.loc[df_full[col_exp_type] == exp_type].copy().dropna(axis=1, how="all")
     cols = cols_map[exp_type]
+    df = df_full.loc[df_full[col_exp_type] == exp_type][
+        [col for col in cols.values() if col is not None]
+    ].dropna(axis=0, how="any")
 
     for i, row in df.iterrows():
         name = row[cols["name"]]
-        if len(row[cols["description"]]) < 10:
+        if len(row[cols["description"]]) < DESCRIPTION_MIN_CHARS:
             raise ValueError("Length of description is too short.")
         description = name + "\n" + row[cols["description"]]
+        # TODO: add zone to description
+        # TODO: add price to db
 
         if cols["start_date"]:
             start_date = datetime.datetime.strptime(
@@ -99,9 +111,14 @@ for exp_type in ["Locale", "Evento"]:
             start_date = DUMMY_START_DATE
             end_date = DUMMY_END_DATE
 
-        location = optional_column(row[cols["location"]])
+        location = (
+            (row[cols["place"]] + " - " if cols["place"] else "")
+            + row[cols["address"]]
+            + " - "
+            + row[cols["province"]]
+        ).strip()
         city = CityEnum.Torino
-        is_countryside = not "torino" in row[cols["province"]].lower()
+        is_countryside = not row[cols["province"]] == "Torino"
 
         closed_days = {
             "is_closed_mon": False,
@@ -112,11 +129,12 @@ for exp_type in ["Locale", "Evento"]:
             "is_closed_sat": False,
             "is_closed_sun": False,
         }
-        if cols["closing_days"] in df.columns:
+        if cols["closing_days"]:
             if not pd.isna(row[cols["closing_days"]]):
                 closing_days: list[str] = row[cols["closing_days"]].split(",")
                 for d in closing_days:
-                    closed_days[map_closed_days[d.strip(" ")]] = True
+                    if d != "Nessuna di queste (il locale è sempre aperto)":
+                        closed_days[map_closed_days[d.strip(" ")]] = True
 
         url = optional_column(row[cols["url"]])
 
@@ -126,16 +144,16 @@ for exp_type in ["Locale", "Evento"]:
 
         is_during_day = False
         is_during_night = False
-        if row[cols["opening_period"]].lower() == "diurno":
+        if row[cols["opening_period"]] == "Diurno":
             is_during_day = True
-        elif row[cols["opening_period"]].lower() == "notturno":
+        elif row[cols["opening_period"]] == "Notturno":
             is_during_night = True
-        elif row[cols["opening_period"]].lower() == "entrambi":
+        elif row[cols["opening_period"]] == "Entrambi":
             is_during_day = True
             is_during_night = True
         else:
             raise ValueError(
-                f"Opening period has a not accepted value: {row[cols['opening_period']].lower()}."
+                f"Opening period has a not accepted value: {row[cols['opening_period']]}."
             )
 
         new_event = Event(
