@@ -5,7 +5,7 @@ from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.db import Base
-from app.db.enums import AnswerType, CityEnum
+from app.db.enums import AnswerType, CityEnum, PriceLevel
 
 
 class UserORM(Base):
@@ -74,6 +74,7 @@ class EventORM(Base):
     name: Mapped[Optional[str]]
     location: Mapped[Optional[str]]
     url: Mapped[Optional[str]]
+    price_level: Mapped[Optional[PriceLevel]]
 
     def __repr__(self) -> str:
         return f"EventORM(id={self.id!r})"

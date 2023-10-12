@@ -10,3 +10,11 @@ class AnswerType(str, Enum):
     blocked = "blocked"
     template = "template"
     unanswered = "unanswered"
+
+
+class PriceLevel(str, Enum):
+    free = "Free"
+    inexpensive = "€"
+    moderate = "€€"
+    expensive = "€€€"
+    very_expensive = "€€€€"

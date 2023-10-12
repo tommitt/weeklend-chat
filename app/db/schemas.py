@@ -2,7 +2,7 @@ import datetime
 
 from pydantic import BaseModel
 
-from app.db.enums import AnswerType, CityEnum
+from app.db.enums import AnswerType, CityEnum, PriceLevel
 from app.db.models import EventORM
 from app.utils.datetime_utils import date_to_timestamp
 
@@ -73,6 +73,7 @@ class Event(BaseModel):
     name: str | None
     location: str | None
     url: str | None
+    price_level: PriceLevel | None
 
 
 class EventInDb(Event):
