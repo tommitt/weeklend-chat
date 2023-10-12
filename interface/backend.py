@@ -1,4 +1,5 @@
 import datetime
+import logging
 
 from fastapi import Depends, FastAPI, status
 from sqlalchemy.orm import Session
@@ -12,6 +13,7 @@ from app.utils.dashboard import get_dashboard_stats
 
 FASTAPI_URL = "http://127.0.0.1:8000"  # default localhost
 
+logging.basicConfig(level=logging.INFO)
 app = FastAPI()
 
 
