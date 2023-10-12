@@ -22,7 +22,7 @@ from app.answerer.prompts import (
     RSCHEMA_EXTRACT_RECOMMENDATIONS,
     RSCHEMA_EXTRACT_TIME,
 )
-from app.constants import N_DOCS
+from app.constants import LAMBDA_MMR, N_DOCS, N_DOCS_MMR
 from app.db.enums import AnswerType
 from app.db.schemas import AnswerOutput
 from app.db.services import get_event_by_id
@@ -218,8 +218,12 @@ class Answerer:
                 answer=MESSAGE_ANSWER_NOT_NEEDED, type=AnswerType.template
             )
 
-        relevant_docs = self.vectorstore.similarity_search(
-            user_query, k=N_DOCS, **filter_kwargs
+        relevant_docs = self.vectorstore.max_marginal_relevance_search(
+            user_query,
+            k=N_DOCS,
+            fetch_k=N_DOCS_MMR,
+            lambda_mult=LAMBDA_MMR,
+            **filter_kwargs,
         )
 
         if not len(relevant_docs):
