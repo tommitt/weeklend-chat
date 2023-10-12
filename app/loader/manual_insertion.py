@@ -1,4 +1,5 @@
 import datetime
+import logging
 
 import pandas as pd
 
@@ -9,16 +10,12 @@ from app.db.services import register_event
 
 FILENAME = "data/weeklend_snap_gform.csv"
 SOURCE = "business-gform"
-DUMMY_START_DATE = datetime.date(2023, 1, 1)
-DUMMY_END_DATE = datetime.date(2033, 1, 1)
-DESCRIPTION_MIN_CHARS = 240
-
 df_full = pd.read_csv(FILENAME)
 db = SessionLocal()
 # TODO: integrate into FastAPI and control panel
 
 
-def yes_no_flag(string: str) -> bool:
+def _yes_no_flag(string: str) -> bool:
     if string.lower() == "si":
         return True
     if string.lower() == "no":
@@ -26,14 +23,18 @@ def yes_no_flag(string: str) -> bool:
     raise ValueError(f"Yes/No flag has a different value: {string}.")
 
 
-def optional_column(string: str) -> str | None:
+def _optional_column(string: str) -> str | None:
     if pd.isna(string) or string == "-" or string == "":
         return None
     return string.strip()
 
 
-col_exp_type = "Stai registrando un locale o un evento?"
-cols_map = {
+_DUMMY_START_DATE = datetime.date(2023, 1, 1)
+_DUMMY_END_DATE = datetime.date(2033, 1, 1)
+_DESCRIPTION_MIN_CHARS = 240
+
+_COL_EXPERIENCE_TYPE = "Stai registrando un locale o un evento?"
+_COLS_MAP = {
     "Evento": {
         "name": "Nome dell'Evento",
         "description": "Descrizione dell'Evento",
@@ -70,7 +71,47 @@ cols_map = {
     },
 }
 
-map_closed_days = {
+_TURIN_ZONE_MAP = {
+    "Centro Storico": "Centro Storico, Porta nuova, Valentino, Parco del Valentino, Quadrilatero, Centro, Piazza Vittorio, Piazza Vitto, Gran Madre, Re Umberto, Vinzaglio, Corso Vittorio.",
+    "Aurora": "Aurora, Giulio, Giulio Cesare, Brescia, Corso Brescia.",
+    "San Salvario": "San Salvario, Valentino, Parco del Valentino, Marconi, Porta Nuova, Dante, Nizza- Carducci, Molinette, Sansa.",
+    "Crocetta": "Crocetta, Re Umberto, Vinzaglio, Politecnico, Poli, Fante, GIardini del Fante, Mercato Crocetta, Einaudi.",
+    "Borgo Po": "Borgo Po",
+    "Vanchiglia": "Vanchiglia, Santa, Santa Giulia, Piazza Santa Giulia, Panche, Azimut, Offtopic, Campus, Campus Einaudi.",
+    "Santa Rita": "Santa Rita, ZSR, Piazza D'armi, Filadelfia, Fila, Palalpitour, Palaisozaki, Stadio del toro, Stadio comunale, Corso Unione, Poveri vecchi, Economia, Università di Economia.",
+    "Mirafiori": "Mirafiori, Via Negarville, Strada cacce, Guido Reni, Sarpi.",
+    "Lingotto": "Lingotto, 8 Gallery, Otto gallery, Eataly, Oval, Green Pea.",
+    "Parella": "Parella, Massaua, Pozzo strada, Montegrappa, Rivoli.",
+    "Borgo San Paolo": "Borgo San Paolo, Robilant, Lancia, DLF, Adriatico, Sabotino, Monginevro, Campetti, Alla spa, Braccini.",
+    "San Donato": "San Donato, Maria Vittoria, Statuto, Bernini, Piazza dei Mestieri.",
+    "Cenisia": "Cenisia, Ceni, Bernini, Rosselli, Racconigi.",
+    "Pozzo Strada": "Pozzo Strada.",
+    "Barriera di Milano": "Barriera di Milano, Maria Ausiliatrice, Sermig, Porta Palazzo, Bologna, Giulo Cesare, Corso Giulio, Mercato centrale, Nuvola lavazza.",
+    "Santa Giulia": "Santa Giulia, Santa, Piazza Santa Giulia.",
+    "Vallette": "Vallette, Carcere, 29.",
+    "Madonna di Campagna": "Madonna di Campagna, Supermarket, Cardinal Massaia.",
+    "Cit Turin": "Cit Turin, Benefica, Principi, Principi d'Acaja, tribunale, Gratta, Grattacielo Intesa.",
+    "Borgo Vittoria": "Borgo Vittoria, Borgo Vitto, Cardinal Massaia, Via Stradella, Corvo rosso, Le Roi, Piper, Iper, Ipercoop.",
+    "Campidoglio": "Campidoglio, Racco, Racconigi.",
+    "Rebaudengo": "Rebaudengo, Piazza Reba, Cigna, Edit, Facit.",
+    "Falchera": "Falchera.",
+    "Regio Parco": "Regio Parco, Panche, Espace, Carmen, Cagliari, Catania, Dual.",
+    "Barriera di Nizza": "Barriera di Nizza, Dante, Nizza, Carducci, Lingotto, Spezia.",
+    "Nizza Millefonti": "Nizza Millefonti, Dante, Nizza, Carducci, Lingotto, Spezia.",
+    "Mirafiori Nord": "Mirafiori Nord, Fiat, Miraflowers.",
+    "Mirafiori Sud": "Mirafiori Sud, Fiat, Miraflowers.",
+    "Borgo Filadelfia": "Borgo Filadelfia, Fila, Toro, Stadio del Toro, Tunisi.",
+    "Valdocco": "Valdocco, Maria Ausiliatrice, Salerno, Archivio, Quadrilatero, Obelisco, Emanuele Filiberto.",
+    "Città Studi": "Città Studi.",
+    "Madonna del Pilone": "Madonna del Pilone.",
+    "Cavoretto": "Cavoretto, Parco Europa, Maddalena, Rimembranza.",
+    "Borgata Lesna": "Borgata Lesna.",
+    "Colletta": "Colletta, Cimitero.",
+    "San Martino": "San Martino.",
+    "Altro (fuori città)": "fuori Torino, fuori porta, fuori città.",
+}
+
+_CLOSED_DAYS_MAP = {
     "Lunedì": "is_closed_mon",
     "Martedì": "is_closed_tue",
     "Mercoledì": "is_closed_wed",
@@ -80,19 +121,26 @@ map_closed_days = {
     "Domenica": "is_closed_sun",
 }
 
+
+# TODO: wrap into function
 counter = 0
 for exp_type in ["Locale", "Evento"]:
-    cols = cols_map[exp_type]
-    df = df_full.loc[df_full[col_exp_type] == exp_type][
+    cols = _COLS_MAP[exp_type]
+    df = df_full.loc[df_full[_COL_EXPERIENCE_TYPE] == exp_type][
         [col for col in cols.values() if col is not None]
     ].dropna(axis=0, how="any")
 
     for i, row in df.iterrows():
         name = row[cols["name"]]
-        if len(row[cols["description"]]) < DESCRIPTION_MIN_CHARS:
+        if len(row[cols["description"]]) < _DESCRIPTION_MIN_CHARS:
             raise ValueError("Length of description is too short.")
-        description = name + "\n" + row[cols["description"]]
-        # TODO: add zone to description
+        description = "\n".join(
+            [
+                name,
+                row[cols["description"]],
+                f"Zona: {_TURIN_ZONE_MAP[row[cols['zone']]]}",
+            ]
+        )
         # TODO: add price to db
 
         if cols["start_date"]:
@@ -108,8 +156,8 @@ for exp_type in ["Locale", "Evento"]:
                 ).date()
             )
         else:
-            start_date = DUMMY_START_DATE
-            end_date = DUMMY_END_DATE
+            start_date = _DUMMY_START_DATE
+            end_date = _DUMMY_END_DATE
 
         location = (
             (row[cols["place"]] + " - " if cols["place"] else "")
@@ -134,13 +182,13 @@ for exp_type in ["Locale", "Evento"]:
                 closing_days: list[str] = row[cols["closing_days"]].split(",")
                 for d in closing_days:
                     if d != "Nessuna di queste (il locale è sempre aperto)":
-                        closed_days[map_closed_days[d.strip(" ")]] = True
+                        closed_days[_CLOSED_DAYS_MAP[d.strip(" ")]] = True
 
-        url = optional_column(row[cols["url"]])
+        url = _optional_column(row[cols["url"]])
 
-        is_for_disabled = yes_no_flag(row[cols["is_for_disabled"]])
-        is_for_children = yes_no_flag(row[cols["is_for_children"]])
-        is_for_animals = yes_no_flag(row[cols["is_for_animals"]])
+        is_for_disabled = _yes_no_flag(row[cols["is_for_disabled"]])
+        is_for_children = _yes_no_flag(row[cols["is_for_children"]])
+        is_for_animals = _yes_no_flag(row[cols["is_for_animals"]])
 
         is_during_day = False
         is_during_night = False
@@ -183,4 +231,4 @@ for exp_type in ["Locale", "Evento"]:
         db_event = register_event(db=db, event_in=new_event, source=SOURCE)
         counter += 1
 
-print(f"Registered {counter} events")
+logging.info(f"Registered {counter} events")
