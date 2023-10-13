@@ -201,7 +201,11 @@ class Answerer:
                 + response[f"event_summary_{i+1}"]
                 + (f"\n📍 {db_event.location}" if db_event.location is not None else "")
                 + (f"\n🌐 {db_event.url}" if db_event.url is not None else "")
-                + (f"\n💰 {db_event.price_level}" if db_event.price_level is not None else "")
+                + (
+                    f"\n💰 {db_event.price_level}"
+                    if db_event.price_level is not None
+                    else ""
+                )
             )
 
         return "\n\n".join([response["intro"]] + event_recommendations)
