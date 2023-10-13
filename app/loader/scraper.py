@@ -154,6 +154,7 @@ class GuidatorinoScraper(BaseScraper):
                     name=event_dict["title"],
                     location=event_dict["location"],
                     url=event_dict["url"],
+                    price_level=None,
                 )
             )
             self.events_list.remove(event_dict)

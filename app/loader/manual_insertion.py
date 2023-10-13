@@ -4,7 +4,7 @@ import logging
 import pandas as pd
 
 from app.db.db import SessionLocal
-from app.db.enums import CityEnum
+from app.db.enums import CityEnum, PriceLevel
 from app.db.schemas import Event
 from app.db.services import register_event
 
@@ -46,7 +46,7 @@ _COLS_MAP = {
         "end_date": "Data di fine dell'evento ",
         "opening_period": "È un evento principalmente diurno o principalmente notturno?",
         "closing_days": None,
-        "price": "Qual è il prezzo medio per persona a questo evento?",
+        "price_level": "Qual è il prezzo medio per persona a questo evento?",
         "is_for_disabled": "Ingresso per disabili?",
         "is_for_children": "Esperienza adatta a famiglie e bambini?.1",
         "is_for_animals": "Ingresso consentito agli animali?.1",
@@ -63,7 +63,7 @@ _COLS_MAP = {
         "end_date": None,
         "opening_period": "Il locale è principalmente diurno o principalmente notturno?",
         "closing_days": "Giorno di chiusura settimanale ",
-        "price": "Qual è il prezzo medio per persona in questo locale?",
+        "price_level": "Qual è il prezzo medio per persona in questo locale?",
         "is_for_disabled": "Ha Ingresso per disabili?",
         "is_for_children": "Esperienza adatta a famiglie e bambini?",
         "is_for_animals": "Ingresso consentito agli animali?",
@@ -121,6 +121,14 @@ _CLOSED_DAYS_MAP = {
     "Domenica": "is_closed_sun",
 }
 
+_PRICE_LEVEL_MAP = {
+    "0€": PriceLevel.free,
+    "1€ - 20€": PriceLevel.inexpensive,
+    "20€ - 50€": PriceLevel.moderate,
+    "50€ - 100€": PriceLevel.expensive,
+    "> 100€": PriceLevel.very_expensive,
+}
+
 
 # TODO: wrap into function
 counter = 0
@@ -141,7 +149,6 @@ for exp_type in ["Locale", "Evento"]:
                 f"Zona: {_TURIN_ZONE_MAP[row[cols['zone']]]}",
             ]
         )
-        # TODO: add price to db
 
         if cols["start_date"]:
             start_date = datetime.datetime.strptime(
@@ -186,6 +193,8 @@ for exp_type in ["Locale", "Evento"]:
 
         url = _optional_column(row[cols["url"]])
 
+        price_level = _PRICE_LEVEL_MAP[row[cols["price_level"]]]
+
         is_for_disabled = _yes_no_flag(row[cols["is_for_disabled"]])
         is_for_children = _yes_no_flag(row[cols["is_for_children"]])
         is_for_animals = _yes_no_flag(row[cols["is_for_animals"]])
@@ -226,6 +235,7 @@ for exp_type in ["Locale", "Evento"]:
             name=name,
             location=location,
             url=url,
+            price_level=price_level,
         )
 
         db_event = register_event(db=db, event_in=new_event, source=SOURCE)
