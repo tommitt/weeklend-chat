@@ -16,9 +16,9 @@ FAKE_USER_ID = -1
 import os
 
 import openai
-from dotenv import find_dotenv, load_dotenv
+from dotenv import load_dotenv
 
-_ = load_dotenv(find_dotenv())
+load_dotenv(override=True)
 
 OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
 openai.organization = os.environ["OPENAI_ORGANIZATION_ID"]
@@ -36,7 +36,6 @@ postgresql\
 :{os.environ.get("POSTGRES_PORT")}\
 /{os.environ.get("POSTGRES_DATABASE")}\
 """
-# SQLALCHEMY_DATABASE_URL = "sqlite:///./data/test.db"
 
 WHATSAPP_API_TOKEN = os.environ.get("WHATSAPP_API_TOKEN")
 WHATSAPP_NUMBER_ID = os.environ.get("WHATSAPP_NUMBER_ID")

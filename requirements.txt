@@ -14,5 +14,3 @@ pinecone-client==2.2.2
 uvicorn==0.23.2
 mangum==0.17.0
 pytest==7.4.2
-# beautifulsoup4==4.12.2
-# streamlit==1.27.0
