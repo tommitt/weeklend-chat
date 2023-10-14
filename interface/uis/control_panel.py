@@ -1,7 +1,7 @@
 import requests
 import streamlit as st
 
-from app.loader.scraper import SUPPORTED_SOURCES
+from app.loader.scraper import SCRAPER_SUPPORTED_SOURCES
 from interface.backend import FASTAPI_URL
 
 
@@ -11,7 +11,7 @@ def ui() -> None:
     st.divider()
 
     st.header("Scraper")
-    source = st.selectbox("Source", options=SUPPORTED_SOURCES)
+    source = st.selectbox("Source", options=SCRAPER_SUPPORTED_SOURCES)
     if st.button("Run scraper!", use_container_width=True):
         with st.spinner("Running scraper..."):
             _ = requests.post(f"{FASTAPI_URL}/control_panel/scraper/{source}")

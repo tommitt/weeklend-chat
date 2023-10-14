@@ -1,4 +1,5 @@
 import datetime
+import logging
 
 import requests
 from bs4 import BeautifulSoup
@@ -101,14 +102,14 @@ class GuidatorinoScraper(BaseScraper):
 
             self.events_list.append(event_dict)
 
-        print(f"Got {len(self.events_list)} to be scraped.")
+        logging.info(f"Got {len(self.events_list)} to be scraped.")
 
     @retry(stop=stop_after_attempt(3))
     def run_event_pages(self) -> None:
         run_events_list = self.events_list.copy()
-        print(f"Running {len(run_events_list)} pages")
+        logging.info(f"Running {len(run_events_list)} pages")
         for i, event_dict in enumerate(run_events_list):
-            print(f"{i+1}/{len(run_events_list)}")
+            logging.info(f"{i+1}/{len(run_events_list)}")
 
             event_response = requests.get(event_dict["url"])
             event_soup = BeautifulSoup(event_response.content, "html.parser")
@@ -164,7 +165,7 @@ class GuidatorinoScraper(BaseScraper):
         self.run_event_pages()
 
 
-SUPPORTED_SOURCES = {
+SCRAPER_SUPPORTED_SOURCES = {
     "guidatorino": GuidatorinoScraper,
 }
 
@@ -177,12 +178,12 @@ class Scraper:
         self.db = db
 
     def set_scraper(self) -> None:
-        if self.identifier not in SUPPORTED_SOURCES:
+        if self.identifier not in SCRAPER_SUPPORTED_SOURCES:
             raise Exception(
                 f"Scraper with identifier {self.identifier} is not supported."
             )
 
-        self.scraper = SUPPORTED_SOURCES[self.identifier]()
+        self.scraper = SCRAPER_SUPPORTED_SOURCES[self.identifier]()
 
     def update_db(self) -> int:
         counter = 0
@@ -198,7 +199,7 @@ class Scraper:
         return counter
 
     def run(self) -> None:
-        print(f"Starting scraper for {self.identifier}.")
+        logging.info(f"Starting scraper for {self.identifier}.")
         self.scraper.run()
         num_inserted_events = self.update_db()
-        print(f"Inserted {num_inserted_events} new events.")
+        logging.info(f"Inserted {num_inserted_events} new events.")
