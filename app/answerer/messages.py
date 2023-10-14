@@ -64,3 +64,7 @@ Che bello rivederti! \
 Posso nuovamente rispondere alle tue domande e cercare le migliori opzioni per te! \
 Avanti, cosa vorresti chiedermi oggi? 😄🎉\
 """
+
+MESSAGE_AI_OUTRO = """\
+Vuoi lasciare un feedback? Scrivilo qua: www.weeklend.it/feedback\
+"""

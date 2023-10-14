@@ -8,6 +8,7 @@ from langchain.prompts import ChatPromptTemplate
 from sqlalchemy.orm import Session
 
 from app.answerer.messages import (
+    MESSAGE_AI_OUTRO,
     MESSAGE_ANSWER_NOT_NEEDED,
     MESSAGE_INVALID_QUERY,
     MESSAGE_NOTHING_RELEVANT,
@@ -208,7 +209,9 @@ class Answerer:
                 )
             )
 
-        return "\n\n".join([response["intro"]] + event_recommendations)
+        return "\n\n".join(
+            [response["intro"]] + event_recommendations + [MESSAGE_AI_OUTRO]
+        )
 
     def run(self, user_query: str) -> AnswerOutput:
         is_invalid, needs_recommendations, filter_kwargs = self.run_extract_filters(
