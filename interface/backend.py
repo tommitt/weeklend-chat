@@ -8,6 +8,7 @@ from app.answerer.answerer import Answerer
 from app.db.db import get_db
 from app.db.schemas import AnswerOutput, DashboardOutput
 from app.loader.loader import Loader
+from app.loader.manual_insertion import GFormLoader
 from app.loader.scraper import Scraper
 from app.utils.dashboard import get_dashboard_stats
 
@@ -34,6 +35,19 @@ async def control_panel_api_run_scraper(
     return {
         "status": status.HTTP_200_OK,
         "detail": f"Scraping of {identifier} is done.",
+    }
+
+
+@app.post("/control_panel/gform/{identifier}")
+async def control_panel_api_run_scraper(
+    identifier: str,
+    db: Session = Depends(get_db),
+):
+    agent = GFormLoader(identifier=identifier, db=db)
+    agent.run()
+    return {
+        "status": status.HTTP_200_OK,
+        "detail": f"GForm loading of {identifier} is done.",
     }
 
 

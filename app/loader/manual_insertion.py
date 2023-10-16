@@ -8,14 +8,13 @@ from app.db.enums import CityEnum, PriceLevel
 from app.db.schemas import Event
 from app.db.services import get_event, register_event
 
-# TODO: integrate into FastAPI and control panel
 GFORM_SUPPORTED_SOURCES = {
     "wklndteam": "data/weeklend_snap_gform_wklndteam.csv",
     "lestrade": "data/weeklend_snap_gform_lestrade.csv",
 }
 
 
-class GformLoader:
+class GFormLoader:
     def __init__(self, identifier: str, db: Session) -> None:
         self.identifier = identifier
         self.source = "gform_" + identifier
@@ -130,14 +129,14 @@ class GformLoader:
         "> 100€": PriceLevel.very_expensive,
     }
 
-    def yes_no_flag(self, string: str) -> bool:
+    def _yes_no_flag(self, string: str) -> bool:
         if string.lower() == "si":
             return True
         if string.lower() == "no":
             return False
         raise ValueError(f"Yes/No flag has a different value: {string}.")
 
-    def optional_column(self, string: str) -> str | None:
+    def _optional_column(self, string: str) -> str | None:
         if pd.isna(string) or string == "-" or string == "":
             return None
         return string.strip()
@@ -205,13 +204,13 @@ class GformLoader:
                             if d != "Nessuna di queste (il locale è sempre aperto)":
                                 closed_days[self._CLOSED_DAYS_MAP[d.strip(" ")]] = True
 
-                url = self.optional_column(row[cols["url"]])
+                url = self._optional_column(row[cols["url"]])
 
                 price_level = self._PRICE_LEVEL_MAP[row[cols["price_level"]]]
 
-                is_for_disabled = self.yes_no_flag(row[cols["is_for_disabled"]])
-                is_for_children = self.yes_no_flag(row[cols["is_for_children"]])
-                is_for_animals = self.yes_no_flag(row[cols["is_for_animals"]])
+                is_for_disabled = self._yes_no_flag(row[cols["is_for_disabled"]])
+                is_for_children = self._yes_no_flag(row[cols["is_for_children"]])
+                is_for_animals = self._yes_no_flag(row[cols["is_for_animals"]])
 
                 is_during_day = False
                 is_during_night = False
