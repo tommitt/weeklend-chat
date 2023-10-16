@@ -1,7 +1,7 @@
 import requests
 import streamlit as st
 
-from app.loader.manual_insertion import GFORM_SUPPORTED_SOURCES
+from app.loader.gform import GFORM_SUPPORTED_SOURCES
 from app.loader.scraper import SCRAPER_SUPPORTED_SOURCES
 from interface.backend import FASTAPI_URL
 

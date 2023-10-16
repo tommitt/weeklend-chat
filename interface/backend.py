@@ -7,8 +7,8 @@ from sqlalchemy.orm import Session
 from app.answerer.answerer import Answerer
 from app.db.db import get_db
 from app.db.schemas import AnswerOutput, DashboardOutput
+from app.loader.gform import GFormLoader
 from app.loader.loader import Loader
-from app.loader.manual_insertion import GFormLoader
 from app.loader.scraper import Scraper
 from app.utils.dashboard import get_dashboard_stats
 

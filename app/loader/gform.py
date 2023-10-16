@@ -27,6 +27,7 @@ class GFormLoader:
                 f"Gform loader with identifier {self.identifier} is not supported."
             )
 
+        # TODO: read directly from google drive
         self.df = pd.read_csv(GFORM_SUPPORTED_SOURCES[self.identifier])
 
     _DUMMY_START_DATE = datetime.date(2023, 1, 1)
@@ -251,6 +252,7 @@ class GFormLoader:
                     price_level=price_level,
                 )
 
+                # TODO: add start_date and end_date as additional search params
                 db_event = get_event(db=self.db, source=self.source, url=url)
                 if db_event is not None:
                     db_event = register_event(
