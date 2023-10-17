@@ -1,5 +1,6 @@
-.resource
-.vscode
+.resource/
+.vscode/
+.secrets/
 .env
 *.pyc
 data/

@@ -166,12 +166,20 @@ def get_event_by_id(db: Session, id: int) -> EventORM | None:
     return db.query(EventORM).filter_by(id=id).first()
 
 
-def get_event(db: Session, source: str, url: str | None) -> EventORM | None:
+def get_event(
+    db: Session,
+    source: str,
+    url: str | None = None,
+    start_date: datetime.date | None = None,
+    end_date: datetime.date | None = None,
+) -> EventORM | None:
     return (
         db.query(EventORM)
         .filter(
             EventORM.source == source,
             EventORM.url == url if url is not None else True,
+            EventORM.start_date == start_date if start_date is not None else True,
+            EventORM.end_date == end_date if end_date is not None else True,
         )
         .first()
     )

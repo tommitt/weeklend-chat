@@ -2,3 +2,6 @@ beautifulsoup4==4.12.2
 pandas==2.1.1
 altair==5.1.1
 streamlit==1.27.0
+google-api-python-client==2.103.0
+google-auth-httplib2==0.1.1
+google-auth-oauthlib==1.1.0

@@ -42,6 +42,12 @@ A scraper has been developed to retrieve events from certain websites.
 
 *Main dependencies: [beautifulsoup4](https://www.crummy.com/software/BeautifulSoup/)*
 
+**📝 Google Form**
+
+An integration to retrieve the events inserted into a Google Form and saved into a Google Sheet is available.
+
+*Main dependencies: [google-api-python-client](https://github.com/googleapis/google-api-python-client)*
+
 
 
 ## 🚀 Where can I try it?

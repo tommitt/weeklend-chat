@@ -1,7 +1,10 @@
 import datetime
 import logging
 
+import numpy as np
 import pandas as pd
+from google.oauth2.service_account import Credentials
+from googleapiclient.discovery import build as google_build
 from sqlalchemy.orm import Session
 
 from app.db.enums import CityEnum, PriceLevel
@@ -9,30 +12,87 @@ from app.db.schemas import Event
 from app.db.services import get_event, register_event
 
 GFORM_SUPPORTED_SOURCES = {
-    "wklndteam": "data/weeklend_snap_gform_wklndteam.csv",
-    "lestrade": "data/weeklend_snap_gform_lestrade.csv",
+    # maps source identifier to sheet name
+    "wklndteam": "Risposte del modulo partner program Wklnd Team",
+    "lestrade": "Risposte del modulo partner program LeStrade",
+    "giuliam&c": "Risposte del modulo partner program GiuliaM&C",
 }
 
 
+def google_sheet_conn():
+    """Connect to Google Sheets API using service account credentials."""
+    _CREDENTIALS_PATH = ".secrets/credentials.json"
+    _SCOPES = ["https://www.googleapis.com/auth/spreadsheets.readonly"]
+
+    credentials = Credentials.from_service_account_file(
+        _CREDENTIALS_PATH, scopes=_SCOPES
+    )
+    return google_build("sheets", "v4", credentials=credentials)
+
+
+def uniquify_columns(cols: list[str]) -> list[str]:
+    """Uniquify a list of columns by appending ".x" for duplicated names."""
+    _COL_FORMAT = "{col}.{count}"
+    unique_cols, new_cols = set(), []
+    for col in cols:
+        if col not in unique_cols:
+            new_cols.append(col)
+            unique_cols.add(col)
+        else:
+            count = 1
+            new_col = _COL_FORMAT.format(col=col, count=count)
+            while new_col in unique_cols:
+                count += 1
+                new_col = _COL_FORMAT.format(col=col, count=count)
+            new_cols.append(new_col)
+            unique_cols.add(new_col)
+    return new_cols
+
+
 class GFormLoader:
+    _DUMMY_START_DATE = datetime.date(2023, 1, 1)
+    _DUMMY_END_DATE = datetime.date(2033, 1, 1)
+    _DESCRIPTION_MIN_CHARS = 240
+
+    _GOOGLE_SHEET_ID = "1wcUwkehwuY1J-wZJntTsaD6KebYDDYnMFEKgO15oPpw"
+
     def __init__(self, identifier: str, db: Session) -> None:
         self.identifier = identifier
         self.source = "gform_" + identifier
-        self.set_df()
+        self._set_df()
         self.db = db
 
-    def set_df(self) -> None:
+    def _set_df(self) -> None:
         if self.identifier not in GFORM_SUPPORTED_SOURCES:
             raise Exception(
                 f"Gform loader with identifier {self.identifier} is not supported."
             )
 
-        # TODO: read directly from google drive
-        self.df = pd.read_csv(GFORM_SUPPORTED_SOURCES[self.identifier])
+        try:
+            service = google_sheet_conn()
+            values = (
+                service.spreadsheets()
+                .values()
+                .get(
+                    spreadsheetId=self._GOOGLE_SHEET_ID,
+                    range=GFORM_SUPPORTED_SOURCES[self.identifier],
+                )
+                .execute()
+                .get("values", [])
+            )
+        except Exception as e:
+            raise Exception(f"Google connection failed: {e}")
 
-    _DUMMY_START_DATE = datetime.date(2023, 1, 1)
-    _DUMMY_END_DATE = datetime.date(2033, 1, 1)
-    _DESCRIPTION_MIN_CHARS = 240
+        if len(values) > 1:
+            df = pd.DataFrame(values[1:]).replace("", np.nan)
+            df.loc[
+                :, [col for col in range(df.columns.max() + 1, len(values[0]))]
+            ] = np.nan
+            df.columns = uniquify_columns(values[0])
+
+            self.df = df
+        else:
+            self.df = pd.DataFrame()
 
     _COL_EXPERIENCE_TYPE = "Stai registrando un locale o un evento?"
     _COLS_MAP = {
@@ -142,8 +202,12 @@ class GFormLoader:
             return None
         return string.strip()
 
-    def run(self) -> int:
+    def run(self) -> None:
         logging.info(f"Starting gform insertion for {self.identifier}.")
+
+        if self.df.empty:
+            logging.info("No data is present.")
+            return
 
         counter = 0
         for exp_type in ["Locale", "Evento"]:
@@ -252,8 +316,13 @@ class GFormLoader:
                     price_level=price_level,
                 )
 
-                # TODO: add start_date and end_date as additional search params
-                db_event = get_event(db=self.db, source=self.source, url=url)
+                db_event = get_event(
+                    db=self.db,
+                    source=self.source,
+                    url=url,
+                    start_date=start_date,
+                    end_date=end_date,
+                )
                 if db_event is not None:
                     db_event = register_event(
                         db=self.db, event_in=new_event, source=self.source
