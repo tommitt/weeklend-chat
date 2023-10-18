@@ -323,7 +323,7 @@ class GFormLoader:
                     start_date=start_date,
                     end_date=end_date,
                 )
-                if db_event is not None:
+                if db_event is None:
                     db_event = register_event(
                         db=self.db, event_in=new_event, source=self.source
                     )
