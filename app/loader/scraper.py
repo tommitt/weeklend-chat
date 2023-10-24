@@ -52,55 +52,63 @@ class GuidatorinoScraper(BaseScraper):
         )
 
         for event in events:
-            event_dict = {}
-            content = event.find("div", {"class", "eventlist-2"})
-            sub_contents = content.find_all("p")
+            try:
+                event_dict = {}
+                content = event.find("div", {"class", "eventlist-2"})
+                sub_contents = content.find_all("p")
 
-            event_dict["url"] = content.find("h3").find("a")["href"]
-            event_dict["title"] = content.find("h3").find("a").text
+                event_dict["url"] = content.find("h3").find("a")["href"]
+                event_dict["title"] = content.find("h3").find("a").text
 
-            categories = content.find("ul", {"class": "event-categories"})
-            event_dict["is_for_children"] = False
-            if categories is not None:
-                for cat in categories.find_all("li"):
-                    if cat.find("a").text == "Bambini":
-                        event_dict["is_for_children"] = True
+                categories = content.find("ul", {"class": "event-categories"})
+                event_dict["is_for_children"] = False
+                if categories is not None:
+                    for cat in categories.find_all("li"):
+                        if cat.find("a").text == "Bambini":
+                            event_dict["is_for_children"] = True
 
-            dates = [
-                datetime.datetime.strptime(d.replace(key, val), "%d-%m-%Y").date()
-                for d in sub_contents[0]
-                .find("span", {"class": "lista-data"})
-                .text.split(" - ")
-                for key, val in self._MONTHS_CONVERSION.items()
-                if key in d
-            ]
-            event_dict["start_date"] = dates[0]
-            event_dict["end_date"] = dates[0] if len(dates) == 1 else dates[1]
+                dates = [
+                    datetime.datetime.strptime(d.replace(key, val), "%d-%m-%Y").date()
+                    for d in sub_contents[0]
+                    .find("span", {"class": "lista-data"})
+                    .text.split(" - ")
+                    for key, val in self._MONTHS_CONVERSION.items()
+                    if key in d
+                ]
+                event_dict["start_date"] = dates[0]
+                event_dict["end_date"] = dates[0] if len(dates) == 1 else dates[1]
 
-            timing = (
-                sub_contents[0]
-                .find("span", {"class": "lista-orario"})
-                .text.strip("Orario:  ")
-                .split(" - ")
-            )
-            (
-                event_dict["is_during_day"],
-                event_dict["is_during_night"],
-            ) = self.get_timing_flags(opening_time=timing[0], closing_time=timing[1])
+                timing = (
+                    sub_contents[0]
+                    .find("span", {"class": "lista-orario"})
+                    .text.strip("Orario:  ")
+                    .split(" - ")
+                )
+                (
+                    event_dict["is_during_day"],
+                    event_dict["is_during_night"],
+                ) = self.get_timing_flags(
+                    opening_time=timing[0], closing_time=timing[1]
+                )
 
-            city = sub_contents[1].find("span", {"class": "evento-citta"}).text
-            address = sub_contents[1].find("span", {"class": "evento-indirizzo"}).text
-            place = sub_contents[1].find("span", {"class": "lista-luogo"}).text
-            location = (
-                city
-                if (city == place) and (city == address)
-                else " - ".join([place, address, city])
-            )
-            event_dict["city"] = CityEnum.Torino
-            event_dict["location"] = location
-            event_dict["is_countryside"] = city != CityEnum.Torino
+                city = sub_contents[1].find("span", {"class": "evento-citta"}).text
+                address = (
+                    sub_contents[1].find("span", {"class": "evento-indirizzo"}).text
+                )
+                place = sub_contents[1].find("span", {"class": "lista-luogo"}).text
+                location = (
+                    city
+                    if (city == place) and (city == address)
+                    else " - ".join([place, address, city])
+                )
+                event_dict["city"] = CityEnum.Torino
+                event_dict["location"] = location
+                event_dict["is_countryside"] = city != CityEnum.Torino
 
-            self.events_list.append(event_dict)
+                self.events_list.append(event_dict)
+
+            except:
+                pass
 
         logging.info(f"Got {len(self.events_list)} to be scraped.")
 
