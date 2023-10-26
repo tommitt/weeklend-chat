@@ -38,10 +38,10 @@ class Answerer:
         self.vectorstore = get_vectorstore()
         self.vectorstore_translator = get_vectorstore_translator()
 
-    def run_extract_filters(self, user_query: str) -> tuple[bool, bool, dict]:
+    def run_extract_filters(
+        self, user_query: str, today_date: datetime.date
+    ) -> tuple[bool, bool, dict]:
         """Self-query to extract filters for later retrieval"""
-        today_date = datetime.date.today()
-
         prompt = ChatPromptTemplate.from_template(template=PROMPT_EXTRACT_FILTERS)
 
         output_parser = StructuredOutputParser.from_response_schemas(
@@ -213,9 +213,9 @@ class Answerer:
             [response["intro"]] + event_recommendations + [MESSAGE_AI_OUTRO]
         )
 
-    def run(self, user_query: str) -> AnswerOutput:
+    def run(self, user_query: str, today_date: datetime.date) -> AnswerOutput:
         is_invalid, needs_recommendations, filter_kwargs = self.run_extract_filters(
-            user_query=user_query
+            user_query=user_query, today_date=today_date
         )
 
         if is_invalid:

@@ -19,9 +19,11 @@ app = FastAPI()
 
 
 @app.post("/chatbot", response_model=AnswerOutput)
-async def chatbot_api(user_query: str, db: Session = Depends(get_db)):
+async def chatbot_api(
+    user_query: str, ref_date: datetime.date, db: Session = Depends(get_db)
+):
     agent = Answerer(db=db)
-    response = agent.run(user_query)
+    response = agent.run(user_query=user_query, today_date=ref_date)
     return response
 
 

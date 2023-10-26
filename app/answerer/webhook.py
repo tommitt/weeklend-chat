@@ -178,8 +178,9 @@ def standard_user_journey(
         _ = client.send_message(
             to_phone_number=db_user.phone_number, message=MESSAGE_WAIT_FOR_ANSWER
         )
+        today_date = datetime.date.today()
         agent = Answerer(db=db)
-        output = agent.run(user_query)
+        output = agent.run(user_query, today_date)
 
     return output
 

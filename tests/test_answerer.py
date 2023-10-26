@@ -1,3 +1,5 @@
+import datetime
+
 import pytest
 from sqlalchemy.orm import Session
 
@@ -8,6 +10,11 @@ from app.db.enums import AnswerType
 @pytest.fixture(scope="module")
 def answerer(database_session: Session) -> Answerer:
     return Answerer(db=database_session)
+
+
+@pytest.fixture(scope="module")
+def ref_date() -> datetime.date:
+    return datetime.date.today()
 
 
 queries_and_expected_extractions = {
@@ -26,9 +33,14 @@ queries_and_expected_extractions = {
     "user_query, expected_extractions", queries_and_expected_extractions.items()
 )
 def test_answerer_run_extract_filters(
-    answerer: Answerer, user_query: str, expected_extractions: dict
+    answerer: Answerer,
+    ref_date: datetime.date,
+    user_query: str,
+    expected_extractions: dict,
 ) -> None:
-    is_invalid, needs_recommendations, _ = answerer.run_extract_filters(user_query)
+    is_invalid, needs_recommendations, _ = answerer.run_extract_filters(
+        user_query=user_query, today_date=ref_date
+    )
 
     if expected_extractions["is_invalid"]:
         assert is_invalid == expected_extractions["is_invalid"]
@@ -45,7 +57,10 @@ queries_and_expected_answer_types = {
     "user_query, expected_answer_type", queries_and_expected_answer_types.items()
 )
 def test_answerer_run(
-    answerer: Answerer, user_query: str, expected_answer_type: AnswerType
+    answerer: Answerer,
+    ref_date: datetime.date,
+    user_query: str,
+    expected_answer_type: AnswerType,
 ) -> None:
-    response = answerer.run(user_query)
+    response = answerer.run(user_query=user_query, today_date=ref_date)
     assert response.type == expected_answer_type

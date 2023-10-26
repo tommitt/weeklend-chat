@@ -17,6 +17,8 @@ def ui() -> None:
             }
         ]
 
+    ref_date = st.date_input("Data di riferimento")
+
     for message in st.session_state["messages"]:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
@@ -29,7 +31,7 @@ def ui() -> None:
         with st.spinner("Sto pensando..."):
             response = requests.post(
                 f"{FASTAPI_URL}/chatbot",
-                params={"user_query": user_query},
+                params={"user_query": user_query, "ref_date": ref_date},
             )
             answer_out = AnswerOutput(**response.json())
 
