@@ -2,7 +2,7 @@
 N_DOCS = 3
 
 N_DOCS_MMR = 6  # >= N_DOCS
-LAMBDA_MMR = 0.8  # from 0 to 1
+LAMBDA_MMR = 0.9  # from 0 to 1
 
 LIMIT_ANSWERS_PER_WEEK = 5
 LIMIT_BLOCKS_PER_WEEK = 3
