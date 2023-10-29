@@ -8,14 +8,12 @@ Weeklend is a chatbot that operates on WhatsApp to provide recommendations on ev
 
 ### Chatbot
 
-**🪝 WhatsApp Webhook**
-
+#### 🪝 WhatsApp Webhook
 A webhook communicates with the WhatsApp Cloud API for receiving messages from the users and sending the appropriate answers back to them.
 
 *Main dependencies: [fastapi](https://github.com/tiangolo/fastapi)*
 
-**🤖 LLM**
-
+#### 🤖 LLM
 When a message is received, an LLM is used for:
 * Extracting information from the message:
   * whether it is valid or not;
@@ -26,28 +24,24 @@ When a message is received, an LLM is used for:
 
 *Main dependencies: [langchain](https://github.com/langchain-ai/langchain), [openai](https://github.com/openai/openai-python)*
 
-**💾 SQL Database**
-
+#### 💾 SQL Database
 A SQL database is used for storing **users**, **conversations** and **events** information.
 
 *Main dependencies: [sqlalchemy](https://github.com/sqlalchemy/sqlalchemy), [alembic](https://github.com/sqlalchemy/alembic)*
 
-**🏪 Vectorstore**
-
+#### 🏪 Vectorstore
 A vectorstore is used to store the embeddings associated to the events' descriptions and retrieve the most similar to a given query.
 
 *Main dependencies: [pinecone](https://github.com/pinecone-io/pinecone-python-client)*
 
 ### Events data mining
 
-**🕷️ Web Scraper**
-
+#### 🕷️ Web Scraper
 A scraper has been developed to retrieve events from certain websites.
 
 *Main dependencies: [beautifulsoup4](https://www.crummy.com/software/BeautifulSoup/)*
 
-**📝 Google Form**
-
+#### 📝 Google Form
 An integration to retrieve the events inserted into a Google Form and saved into a Google Sheet is available.
 
 *Main dependencies: [google-api-python-client](https://github.com/googleapis/google-api-python-client)*
