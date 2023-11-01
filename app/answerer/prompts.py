@@ -60,12 +60,11 @@ It can be either "daytime", "nighttime" or "both".\
 # generate answer with context
 PROMPT_CONTEXT_ANSWER = """\
 You are provided with some events enclosed within triple backticks. \
-You should pick from 0 to {k} events that answer the user's query \
-and summarize their descriptions. \
+You should pick from 0 to {k} events that answer the user's query. \
+You should provide a summary of the chosen events' descriptions. \
 Base your answer solely on the provided descriptions and do not invent anything. \
 Respond by suggesting each event separately, \
-ensuring that you do not mix information from different events. \
-Order them by relevance, with the most relevant on the top.
+ensuring that you do not mix information from different events.
 
 Respond in italian.
 ----------------
@@ -88,5 +87,5 @@ Output -1 if the relevant events are less than {number}.\
 """
 
 RSCHEMA_ANSWER_EVENT_SUMMARY = """\
-This is a summary of event {number}.\
+This is a descriptive summary of event {number}.\
 """
