@@ -33,7 +33,7 @@ Sarà un piacere aiutarti a trovare le migliori opzioni per il tuo tempo libero.
 """
 
 MESSAGE_WAIT_FOR_ANSWER = """\
-Sto pensando... torno in pochi secondi 🏃\
+Sto pensando... torno in 30 secondi 🏃\
 """
 
 MESSAGE_WEEK_ANSWERS_LIMIT = """\

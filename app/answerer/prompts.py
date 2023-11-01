@@ -59,11 +59,9 @@ It can be either "daytime", "nighttime" or "both".\
 
 # generate answer with context
 PROMPT_CONTEXT_ANSWER = """\
-Your goal is to give recommendations to the user based on their query below. \
-The user is seeking recommendations for \
-events, activities, exhibitions, bars, restaurants or places to visit.
-
-You are provided with {k} event descriptions enclosed within triple backticks. \
+You are provided with some events enclosed within triple backticks. \
+You should pick from 0 to {k} events that answer the user's query. \
+You should provide a summary of the chosen events' descriptions. \
 Base your answer solely on the provided descriptions and do not invent anything. \
 Respond by suggesting each event separately, \
 ensuring that you do not mix information from different events.
@@ -79,10 +77,15 @@ User query: {user_query}
 
 RSCHEMA_ANSWER_INTRO = """\
 This is a brief introduction to the message. \
-If these events do not fully address the user's query, \
-explain to the user that they are not completely relevant.\
+If all the events do not fully address the user's query, \
+urge the user to try with something else.\
+"""
+
+RSCHEMA_ANSWER_EVENT_ID = """\
+This is the ID of the chosen event {number}.\
+Output -1 if the relevant events are less than {number}.\
 """
 
 RSCHEMA_ANSWER_EVENT_SUMMARY = """\
-This is a medium-long summary of event number {number}.\
+This is a descriptive summary of event {number}.\
 """

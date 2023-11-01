@@ -16,6 +16,7 @@ from app.answerer.messages import (
 from app.answerer.prompts import (
     PROMPT_CONTEXT_ANSWER,
     PROMPT_EXTRACT_FILTERS,
+    RSCHEMA_ANSWER_EVENT_ID,
     RSCHEMA_ANSWER_EVENT_SUMMARY,
     RSCHEMA_ANSWER_INTRO,
     RSCHEMA_EXTRACT_DATE,
@@ -23,7 +24,7 @@ from app.answerer.prompts import (
     RSCHEMA_EXTRACT_RECOMMENDATIONS,
     RSCHEMA_EXTRACT_TIME,
 )
-from app.constants import LAMBDA_MMR, N_DOCS, N_DOCS_MMR
+from app.constants import N_EVENTS_CONTEXT, N_EVENTS_MAX
 from app.db.enums import AnswerType
 from app.db.schemas import AnswerOutput
 from app.db.services import get_event_by_id
@@ -160,17 +161,27 @@ class Answerer:
             filter_kwargs,
         )
 
-    def run_generate_answer(self, user_query: str, docs: list[Document]) -> str:
+    def run_generate_answer(
+        self, user_query: str, docs: list[Document]
+    ) -> AnswerOutput:
         prompt = ChatPromptTemplate.from_template(template=PROMPT_CONTEXT_ANSWER)
 
         output_parser = StructuredOutputParser.from_response_schemas(
             [ResponseSchema(name="intro", description=RSCHEMA_ANSWER_INTRO)]
             + [
-                ResponseSchema(
-                    name=f"event_summary_{i+1}",
-                    description=RSCHEMA_ANSWER_EVENT_SUMMARY.format(number=i + 1),
+                rs
+                for i in range(N_EVENTS_MAX)
+                for rs in (
+                    ResponseSchema(
+                        name=f"event_id_{i+1}",
+                        description=RSCHEMA_ANSWER_EVENT_ID.format(number=i + 1),
+                        type="integer",
+                    ),
+                    ResponseSchema(
+                        name=f"event_summary_{i+1}",
+                        description=RSCHEMA_ANSWER_EVENT_SUMMARY.format(number=i + 1),
+                    ),
                 )
-                for i in range(len(docs))
             ]
         )
 
@@ -178,26 +189,37 @@ class Answerer:
             prompt.format_messages(
                 context="\n\n".join(
                     [
-                        f"Event number {i+1}:\n```{doc.page_content}```"
-                        for i, doc in enumerate(docs)
+                        f"ID {doc.metadata['id']}:\n```{doc.page_content}```"
+                        for doc in docs
                     ]
                 ),
                 user_query=user_query,
-                k=len(docs),
+                k=N_EVENTS_MAX,
                 format_instructions=output_parser.get_format_instructions(),
             )
         )
         response = output_parser.parse(response_raw.content)
 
-        event_recommendations = []
-        for i, doc in enumerate(docs):
-            db_event = get_event_by_id(db=self.db, id=doc.metadata["id"])
+        recommendation_ids = [
+            response[f"event_id_{i+1}"]
+            for i in range(N_EVENTS_MAX)
+            if response[f"event_id_{i+1}"] != -1
+        ]
+        if len(recommendation_ids) == 0:
+            return AnswerOutput(
+                answer=response["intro"],
+                type=AnswerType.template,
+            )
+
+        recommendation_summaries = []
+        for i, event_id in enumerate(recommendation_ids):
+            db_event = get_event_by_id(db=self.db, id=event_id)
             if db_event is None:
                 raise Exception(
-                    f"Event in vectorstore is not present in db (id={doc.metadata['id']})."
+                    f"Event in vectorstore is not present in db (id={event_id})."
                 )
 
-            event_recommendations.append(
+            recommendation_summaries.append(
                 f"{i+1}. "
                 + response[f"event_summary_{i+1}"]
                 + (f"\n📍 {db_event.location}" if db_event.location is not None else "")
@@ -209,8 +231,14 @@ class Answerer:
                 )
             )
 
-        return "\n\n".join(
-            [response["intro"]] + event_recommendations + [MESSAGE_AI_OUTRO]
+        elaborated_answer = "\n\n".join(
+            [response["intro"]] + recommendation_summaries + [MESSAGE_AI_OUTRO]
+        )
+
+        return AnswerOutput(
+            answer=elaborated_answer,
+            type=AnswerType.ai,
+            used_event_ids=recommendation_ids,
         )
 
     def run(self, user_query: str, today_date: datetime.date) -> AnswerOutput:
@@ -226,12 +254,8 @@ class Answerer:
                 answer=MESSAGE_ANSWER_NOT_NEEDED, type=AnswerType.template
             )
 
-        relevant_docs = self.vectorstore.max_marginal_relevance_search(
-            user_query,
-            k=N_DOCS,
-            fetch_k=N_DOCS_MMR,
-            lambda_mult=LAMBDA_MMR,
-            **filter_kwargs,
+        relevant_docs = self.vectorstore.similarity_search(
+            user_query, k=N_EVENTS_CONTEXT, **filter_kwargs
         )
 
         if not len(relevant_docs):
@@ -239,12 +263,4 @@ class Answerer:
                 answer=MESSAGE_NOTHING_RELEVANT, type=AnswerType.template
             )
         else:
-            return AnswerOutput(
-                answer=self.run_generate_answer(
-                    user_query=user_query, docs=relevant_docs
-                ),
-                type=AnswerType.ai,
-                used_event_ids=[
-                    relevant_docs[i].metadata["id"] for i in range(len(relevant_docs))
-                ],
-            )
+            return self.run_generate_answer(user_query=user_query, docs=relevant_docs)
