@@ -1,5 +1,4 @@
 import datetime
-import locale
 import logging
 
 import requests
@@ -10,6 +9,7 @@ from tenacity import retry, stop_after_attempt
 from app.db.enums import CityEnum
 from app.db.schemas import Event
 from app.db.services import get_event, register_event
+from app.utils.datetime_utils import convert_italian_month
 
 
 class BaseScraper:
@@ -48,7 +48,6 @@ class GuidatorinoScraper(BaseScraper):
         self.identifier: str = "guidatorino"
         self.root_url: str = "https://www.guidatorino.com/eventi-torino/"
         self.events_list: list[dict] = []
-        locale.setlocale(locale.LC_ALL, "it_IT")
 
     def run_root_page(self) -> None:
         response = requests.get(self.root_url)
@@ -79,7 +78,9 @@ class GuidatorinoScraper(BaseScraper):
                             event_dict["is_for_children"] = True
 
                 dates = [
-                    datetime.datetime.strptime(d, "%d %B %Y").date()
+                    datetime.datetime.strptime(
+                        convert_italian_month(d), "%d %B %Y"
+                    ).date()
                     for d in sub_contents[0]
                     .find("span", {"class": "lista-data"})
                     .text.split(" - ")
