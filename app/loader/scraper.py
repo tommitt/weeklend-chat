@@ -13,6 +13,20 @@ from app.db.services import get_event, register_event
 
 
 class BaseScraper:
+    _SOURCE_ROOT = "webscraper_"
+    _BASE_IDENTIFIER = "base"
+
+    def __init__(self, db: Session) -> None:
+        self.identifier = self._BASE_IDENTIFIER
+        self.output: list[Event] = []
+        self.db = db
+
+    @property
+    def source(self) -> str:
+        if self.identifier == self._BASE_IDENTIFIER:
+            raise Exception("Property source cannot be called with base class.")
+        return self._SOURCE_ROOT + self.identifier
+
     def get_timing_flags(
         self, opening_time: str, closing_time: str
     ) -> tuple[bool, bool]:
@@ -21,13 +35,19 @@ class BaseScraper:
         is_during_night = int(closing_time.split(":")[0]) >= 20
         return is_during_day, is_during_night
 
+    def is_event_in_db(self, event_url: str) -> bool:
+        db_event = get_event(db=self.db, source=self.source, url=event_url)
+        if db_event is None:
+            return False
+        return True
+
 
 class GuidatorinoScraper(BaseScraper):
-    def __init__(self) -> None:
+    def __init__(self, db: Session) -> None:
+        super().__init__(db=db)
         self.identifier: str = "guidatorino"
         self.root_url: str = "https://www.guidatorino.com/eventi-torino/"
         self.events_list: list[dict] = []
-        self.output: list[Event] = []
         locale.setlocale(locale.LC_ALL, "it_IT")
 
     def run_root_page(self) -> None:
@@ -44,7 +64,11 @@ class GuidatorinoScraper(BaseScraper):
                 content = event.find("div", {"class", "eventlist-2"})
                 sub_contents = content.find_all("p")
 
-                event_dict["url"] = content.find("h3").find("a")["href"]
+                event_url = content.find("h3").find("a")["href"]
+                if self.is_event_in_db(event_url):
+                    continue
+
+                event_dict["url"] = event_url
                 event_dict["title"] = content.find("h3").find("a").text
 
                 categories = content.find("ul", {"class": "event-categories"})
@@ -95,7 +119,7 @@ class GuidatorinoScraper(BaseScraper):
             except:
                 pass
 
-        logging.info(f"Got {len(self.events_list)} to be scraped.")
+        logging.info(f"Got {len(self.events_list)} new events to be scraped.")
 
     @retry(stop=stop_after_attempt(3))
     def run_event_pages(self) -> None:
@@ -165,26 +189,21 @@ SCRAPER_SUPPORTED_SOURCES = {
 
 class Scraper:
     def __init__(self, identifier: str, db: Session) -> None:
-        self.identifier = identifier
-        self.source = "webscraper_" + identifier
-        self.set_scraper()
+        self.set_scraper(identifier)
         self.db = db
 
-    def set_scraper(self) -> None:
-        if self.identifier not in SCRAPER_SUPPORTED_SOURCES:
-            raise Exception(
-                f"Scraper with identifier {self.identifier} is not supported."
-            )
-
-        self.scraper = SCRAPER_SUPPORTED_SOURCES[self.identifier]()
+    def set_scraper(self, identifier: str) -> None:
+        if identifier not in SCRAPER_SUPPORTED_SOURCES:
+            raise Exception(f"Scraper with identifier {identifier} is not supported.")
+        self.scraper = SCRAPER_SUPPORTED_SOURCES[identifier](db=self.db)
 
     def update_db(self) -> int:
         counter = 0
         for event in self.scraper.output:
-            db_event = get_event(db=self.db, source=self.source, url=event.url)
+            db_event = get_event(db=self.db, source=self.scraper.source, url=event.url)
             if db_event is None:
                 db_event = register_event(
-                    db=self.db, event_in=event, source=self.source
+                    db=self.db, event_in=event, source=self.scraper.source
                 )
                 counter += 1
 
@@ -192,7 +211,7 @@ class Scraper:
         return counter
 
     def run(self) -> None:
-        logging.info(f"Starting scraper for {self.identifier}.")
+        logging.info(f"Starting scraper for {self.scraper.identifier}.")
         self.scraper.run()
         num_inserted_events = self.update_db()
         logging.info(f"Inserted {num_inserted_events} new events.")
