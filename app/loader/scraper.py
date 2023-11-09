@@ -1,4 +1,5 @@
 import datetime
+import locale
 import logging
 
 import requests
@@ -22,26 +23,12 @@ class BaseScraper:
 
 
 class GuidatorinoScraper(BaseScraper):
-    _MONTHS_CONVERSION = {
-        " Gennaio ": "-01-",
-        " Febbraio ": "-02-",
-        " Marzo ": "-03-",
-        " Aprile ": "-04-",
-        " Maggio ": "-05-",
-        " Giugno ": "-06-",
-        " Luglio ": "-07-",
-        " Agosto ": "-08-",
-        " Settembre ": "-09-",
-        " Ottobre ": "-10-",
-        " Novembre ": "-11-",
-        " Dicembre ": "-12-",
-    }
-
     def __init__(self) -> None:
         self.identifier: str = "guidatorino"
         self.root_url: str = "https://www.guidatorino.com/eventi-torino/"
         self.events_list: list[dict] = []
         self.output: list[Event] = []
+        locale.setlocale(locale.LC_ALL, "it_IT")
 
     def run_root_page(self) -> None:
         response = requests.get(self.root_url)
@@ -68,12 +55,10 @@ class GuidatorinoScraper(BaseScraper):
                             event_dict["is_for_children"] = True
 
                 dates = [
-                    datetime.datetime.strptime(d.replace(key, val), "%d-%m-%Y").date()
+                    datetime.datetime.strptime(d, "%d %B %Y").date()
                     for d in sub_contents[0]
                     .find("span", {"class": "lista-data"})
                     .text.split(" - ")
-                    for key, val in self._MONTHS_CONVERSION.items()
-                    if key in d
                 ]
                 event_dict["start_date"] = dates[0]
                 event_dict["end_date"] = dates[0] if len(dates) == 1 else dates[1]
