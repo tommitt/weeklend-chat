@@ -119,7 +119,8 @@ class GuidatorinoScraper(BaseScraper):
 
                 self.events_list.append(event_dict)
 
-            except:
+            except Exception as e:
+                logging.info(f"Skipping event for exception: {e}")
                 pass
 
         logging.info(f"Got {len(self.events_list)} new events to be scraped.")
@@ -221,82 +222,92 @@ class LovelangheScraper(BaseScraper):
         for i, url in enumerate(run_event_urls):
             logging.info(f"{i+1}/{len(run_event_urls)}")
 
-            response = requests.get(url)
-            soup = BeautifulSoup(response.content, "html.parser")
+            try:
+                response = requests.get(url)
+                soup = BeautifulSoup(response.content, "html.parser")
 
-            city, place = [
-                s.strip()
-                for s in soup.find(
-                    "h2", {"class", "t-event__surtitle uppercase--md"}
-                ).text.split(b"\xe2\x80\x94".decode("utf-8"))
-            ]
-            is_countryside = False if city == "Torino" else True
+                city, place = [
+                    s.strip()
+                    for s in soup.find(
+                        "h2", {"class", "t-event__surtitle uppercase--md"}
+                    ).text.split(b"\xe2\x80\x94".decode("utf-8"))
+                ]
+                is_countryside = False if city == "Torino" else True
 
-            title = soup.find("h1", {"class": "t-event__title condensed--xl"}).text
-            subtitle = soup.find("p", {"class": "t-event__subtitle serif--md"}).text
+                title = soup.find("h1", {"class": "t-event__title condensed--xl"}).text
+                subtitle = soup.find("p", {"class": "t-event__subtitle serif--md"}).text
 
-            dates = soup.find_all("div", {"class": "dates__cell"})
+                dates = soup.find_all("div", {"class": "dates__cell"})
 
-            start_date, end_date = [
-                datetime.datetime.strptime(
-                    convert_italian_month(d.find("p", {"class": "dates__full"}).text),
-                    "%d %B %Y",
-                ).date()
-                for d in dates
-            ]
+                start_date, end_date = [
+                    datetime.datetime.strptime(
+                        convert_italian_month(
+                            d.find("p", {"class": "dates__full"}).text
+                        ),
+                        "%d %B %Y",
+                    ).date()
+                    for d in dates
+                ]
 
-            opening_time = dates[0].find("p", {"class": "dates__time"}).text[5:]
-            closing_time_temp = dates[1].find("p", {"class": "dates__time"}).text
-            closing_time = (
-                "24:00"
-                if closing_time_temp == "fino a tarda notte"
-                else closing_time_temp[5:]
-            )
-            is_during_day, is_during_night = self.get_timing_flags(
-                opening_time, closing_time
-            )
-
-            contents = soup.find_all(
-                "div",
-                {
-                    "class",
-                    "content typography typography--dropcap-none base-section-col__content",
-                },
-            )
-            text = contents[0].text.strip()
-            address = contents[1].text.strip()[11:]
-
-            description = "\n".join([title, subtitle, text])
-            location = " - ".join([place, address, city])
-
-            self.output.append(
-                Event(
-                    description=description,
-                    is_vectorized=False,
-                    # metadata
-                    city=CityEnum.Torino,
-                    start_date=start_date,
-                    end_date=end_date,
-                    is_closed_mon=False,
-                    is_closed_tue=False,
-                    is_closed_wed=False,
-                    is_closed_thu=False,
-                    is_closed_fri=False,
-                    is_closed_sat=False,
-                    is_closed_sun=False,
-                    is_during_day=is_during_day,
-                    is_during_night=is_during_night,
-                    is_countryside=is_countryside,
-                    is_for_children=False,
-                    is_for_disabled=False,
-                    is_for_animals=False,
-                    # additional info
-                    name=title,
-                    location=location,
-                    url=url,
-                    price_level=None,
+                opening_time = dates[0].find("p", {"class": "dates__time"}).text[5:]
+                closing_time_temp = dates[1].find("p", {"class": "dates__time"}).text
+                closing_time = (
+                    "24:00"
+                    if closing_time_temp == "fino a tarda notte"
+                    else closing_time_temp[5:]
                 )
-            )
+                is_during_day, is_during_night = self.get_timing_flags(
+                    opening_time, closing_time
+                )
+
+                contents = soup.find_all(
+                    "div",
+                    {
+                        "class",
+                        "content typography typography--dropcap-none base-section-col__content",
+                    },
+                )
+                text = contents[0].text.strip()
+                address = contents[1].text.strip()[11:]
+
+                description = "\n".join([title, subtitle, text])
+                location = " - ".join([place, address, city])
+
+                self.output.append(
+                    Event(
+                        description=description,
+                        is_vectorized=False,
+                        # metadata
+                        city=CityEnum.Torino,
+                        start_date=start_date,
+                        end_date=end_date,
+                        is_closed_mon=False,
+                        is_closed_tue=False,
+                        is_closed_wed=False,
+                        is_closed_thu=False,
+                        is_closed_fri=False,
+                        is_closed_sat=False,
+                        is_closed_sun=False,
+                        is_during_day=is_during_day,
+                        is_during_night=is_during_night,
+                        is_countryside=is_countryside,
+                        is_for_children=False,
+                        is_for_disabled=False,
+                        is_for_animals=False,
+                        # additional info
+                        name=title,
+                        location=location,
+                        url=url,
+                        price_level=None,
+                    )
+                )
+
+            except Exception as e:
+                logging.info(
+                    f"Failed to retrieve info from event at: {url}. Exception: {e}"
+                )
+                pass
+
             self.event_urls.remove(url)
 
     def run(self) -> None:
