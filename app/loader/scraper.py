@@ -189,8 +189,8 @@ SCRAPER_SUPPORTED_SOURCES = {
 
 class Scraper:
     def __init__(self, identifier: str, db: Session) -> None:
-        self.set_scraper(identifier)
         self.db = db
+        self.set_scraper(identifier)
 
     def set_scraper(self, identifier: str) -> None:
         if identifier not in SCRAPER_SUPPORTED_SOURCES:
