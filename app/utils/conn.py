@@ -7,6 +7,7 @@ from langchain.retrievers.self_query.base import PineconeTranslator
 from langchain.vectorstores import Pinecone, VectorStore
 
 from app.constants import (
+    EMBEDDING_SIZE,
     OPENAI_API_KEY,
     PINECONE_API_KEY,
     PINECONE_ENV,
@@ -27,7 +28,7 @@ def get_vectorstore() -> VectorStore:
         pinecone.create_index(
             name=PINECONE_INDEX,
             metric="cosine",
-            dimension=1536,  # that's specific to OpenAIEmbeddings
+            dimension=EMBEDDING_SIZE,
             source_collection=(
                 # retrieve from collections if present
                 PINECONE_INDEX

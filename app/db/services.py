@@ -1,10 +1,18 @@
 import datetime
 
+import pinecone
 from fastapi import HTTPException
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.constants import FAKE_USER_ID
+from app.constants import (
+    EMBEDDING_SIZE,
+    FAKE_USER_ID,
+    PINECONE_API_KEY,
+    PINECONE_ENV,
+    PINECONE_INDEX,
+    PINECONE_NAMESPACE,
+)
 from app.db.enums import AnswerType
 from app.db.models import ConversationORM, EventORM, UserORM
 from app.db.schemas import Conversation, ConversationTemp, ConversationUpd, Event, User
@@ -195,3 +203,41 @@ def register_event(db: Session, event_in: Event, source: str) -> EventORM:
     db.commit()
     db.refresh(db_event)
     return db_event
+
+
+def delete_event_by_id(db: Session, event_id: int, from_vectorstore_only: bool = True):
+    """
+    Delete event by id from vectorstore and (optionally) from database.
+    This implementation is Pinecone-specific.
+    """
+    db_event = get_event_by_id(db=db, id=event_id)
+
+    if db_event is None:
+        raise Exception(f"Event (id={event_id}) not present in database.")
+    if not db_event.is_vectorized:
+        raise Exception(f"Event (id={event_id}) is not vectorized.")
+
+    pinecone.init(api_key=PINECONE_API_KEY, environment=PINECONE_ENV)
+    index = pinecone.Index(PINECONE_INDEX)
+
+    queries = index.query(
+        top_k=1,
+        vector=[0] * EMBEDDING_SIZE,
+        namespace=PINECONE_NAMESPACE,
+        include_metadata=True,
+        include_values=False,
+        filter={"id": event_id},
+    )
+    doc_event = [q for q in queries["matches"]][0]
+    delete_response = index.delete(ids=[doc_event.id], namespace=PINECONE_NAMESPACE)
+    if delete_response:
+        raise Exception(
+            f"Pinecone failed to delete event (id={event_id}). Response: {delete_response}"
+        )
+
+    db_event.is_vectorized = False
+
+    if not from_vectorstore_only:
+        db.delete(db_event)
+
+    db.commit()

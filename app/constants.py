@@ -9,6 +9,7 @@ LIMIT_MAX_USERS = 500
 # non-mutable
 TIMESTAMP_ORIGIN = "2023-01-01"
 FAKE_USER_ID = -1
+EMBEDDING_SIZE = 1536  # that's specific to OpenAIEmbeddings
 
 # from .env
 import os
