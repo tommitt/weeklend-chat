@@ -87,5 +87,5 @@ Output -1 if the relevant events are less than {number}.\
 """
 
 RSCHEMA_ANSWER_EVENT_SUMMARY = """\
-This is a descriptive summary of event {number}.\
+This is a descriptive medium-length summary of event {number}.\
 """

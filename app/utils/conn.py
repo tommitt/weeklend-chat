@@ -17,7 +17,7 @@ from app.constants import (
 
 
 def get_llm():
-    return ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0)
+    return ChatOpenAI(model_name="gpt-3.5-turbo-1106", temperature=0)
 
 
 def get_vectorstore() -> VectorStore:
