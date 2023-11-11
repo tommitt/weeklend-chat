@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.answerer.answerer import Answerer
 from app.answerer.messages import (
     MESSAGE_GOT_UNBLOCKED,
+    MESSAGE_NOT_DELIVERED,
     MESSAGE_REACHED_MAX_USERS,
     MESSAGE_WAIT_FOR_ANSWER,
     MESSAGE_WEEK_ANSWERS_LIMIT,
@@ -19,6 +20,7 @@ from app.constants import (
     LIMIT_ANSWERS_PER_WEEK,
     LIMIT_BLOCKS_PER_WEEK,
     LIMIT_MAX_USERS,
+    THRESHOLD_NOT_DELIVERED_ANSWER,
     WHATSAPP_HOOK_TOKEN,
 )
 from app.db.db import get_db
@@ -208,8 +210,9 @@ async def handle_post_request(
         # read message
         phone_number = message["from"]
         wa_id = message["id"]
-        timestamp = int(message["timestamp"])
         message_body = message["text"]["body"]
+        message_timestamp = int(message["timestamp"])
+        current_timestamp = datetime.datetime.utcnow().timestamp()
 
         db_conversation = get_conversation(db=db, wa_id=wa_id)
         if db_conversation is not None:
@@ -222,7 +225,7 @@ async def handle_post_request(
             conversation_temp_in=ConversationTemp(
                 from_message=message_body,
                 wa_id=wa_id,
-                received_at=datetime.datetime.utcfromtimestamp(timestamp),
+                received_at=datetime.datetime.utcfromtimestamp(message_timestamp),
             ),
         )
 
@@ -235,6 +238,13 @@ async def handle_post_request(
         else:
             if db_user.is_blocked:
                 output = blocked_user_journey(db=db, db_user=db_user)
+            elif (
+                round(current_timestamp - message_timestamp)
+                > THRESHOLD_NOT_DELIVERED_ANSWER
+            ):
+                output = AnswerOutput(
+                    answer=MESSAGE_NOT_DELIVERED, type=AnswerType.failed
+                )
             else:
                 output = standard_user_journey(
                     db=db,

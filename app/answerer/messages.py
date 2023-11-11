@@ -68,3 +68,8 @@ Avanti, cosa vorresti chiedermi oggi? 😄🎉\
 MESSAGE_AI_OUTRO = """\
 Vuoi lasciare un feedback? Scrivilo qua: www.weeklend.it/feedback\
 """
+
+MESSAGE_NOT_DELIVERED = """\
+Perdonami, ma qualcosa è andato storto e non sono in grado di elaborare la tua richiesta. 🙁
+Puoi sempre provare con qualcos'altro!
+"""
