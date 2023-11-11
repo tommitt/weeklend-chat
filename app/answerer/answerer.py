@@ -203,7 +203,7 @@ class Answerer:
         recommendation_ids = [
             response[f"event_id_{i+1}"]
             for i in range(N_EVENTS_MAX)
-            if response[f"event_id_{i+1}"] != -1
+            if response[f"event_id_{i+1}"] != 0
         ]
         if len(recommendation_ids) == 0:
             return AnswerOutput(

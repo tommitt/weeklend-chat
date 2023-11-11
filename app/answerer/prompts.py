@@ -83,10 +83,10 @@ urge the user to try with something else.\
 
 RSCHEMA_ANSWER_EVENT_ID = """\
 This is the ID of the chosen event {number}. \
-Output -1 if the relevant events are less than {number}.\
+If this one is not needed, output 0.\
 """
 
 RSCHEMA_ANSWER_EVENT_SUMMARY = """\
 This is a descriptive medium-length summary of event {number}. \
-Output an empty string if the relevant events are less than {number}.\
+If this one is not needed, output an empty string.\
 """
