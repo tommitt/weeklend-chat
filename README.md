@@ -60,7 +60,7 @@ Scan the QR code and start chatting with the deployed version:
 * When the database schema is modified, run a migration by following these steps:
   * Generate a migration with: `alembic revision --autogenerate -m "Your migration title"`;
   * Check the auto-generated migration file in `migrations/` folder and manually modify it if necessary;
-  * Upgrade the database schema with: `alembic upgrade HEAD`.
+  * Upgrade the database schema with: `alembic upgrade head`.
 * There are a few UIs built to interact with different parts of the app, to use them:
   * Activate the backend for the UIs with: `uvicorn interface.backend:app`;
   * Run the frontend with: `streamlit run main_ui.py`.
