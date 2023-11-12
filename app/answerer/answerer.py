@@ -11,23 +11,22 @@ from sqlalchemy.orm import Session
 
 from app.answerer.prompts import SYSTEM_PROMPT
 from app.answerer.tools import search_events
+from app.constants import N_EVENTS_MAX
 from app.db.enums import AnswerType
 from app.db.schemas import AnswerOutput
-from app.utils.conn import get_llm, get_vectorstore, get_vectorstore_translator
+from app.utils.conn import get_llm
 
 
 class Answerer:
     def __init__(self, db: Session) -> None:
         self.db = db
         self.llm = get_llm()
-        self.vectorstore = get_vectorstore()
-        self.vectorstore_translator = get_vectorstore_translator()
 
     def run(self, user_query: str, today_date: datetime.date) -> AnswerOutput:
         # TODO: add previous conversations
         prompt = ChatPromptTemplate.from_messages(
             [
-                ("system", SYSTEM_PROMPT),
+                ("system", SYSTEM_PROMPT.format(k=N_EVENTS_MAX, today_date=today_date)),
                 ("human", "{user_query}"),
                 MessagesPlaceholder(variable_name="agent_scratchpad"),
             ]
