@@ -63,6 +63,9 @@ def get_dashboard_stats(
     answers_blocked_count = next(
         (v for k, v in convs_count_by_type if k == AnswerType.blocked), 0
     )
+    answers_failed_count = next(
+        (v for k, v in convs_count_by_type if k == AnswerType.failed), 0
+    )
     answers_unanswered_count = next(
         (v for k, v in convs_count_by_type if k == AnswerType.unanswered), 0
     )
@@ -71,6 +74,7 @@ def get_dashboard_stats(
         answers_ai_count
         + answers_template_count
         + answers_blocked_count
+        + answers_failed_count
         + answers_unanswered_count
         + failed_convs_count
     )
@@ -88,6 +92,6 @@ def get_dashboard_stats(
         conversations_answered_other_template=(answers_template_count - new_user_count),
         conversations_answered_blocked=answers_blocked_count,
         conversations_unanswered=answers_unanswered_count,
-        conversations_failed=failed_convs_count,
+        conversations_failed=failed_convs_count + answers_failed_count,
         avg_messages_per_user=convs_tot_count / users_count,
     )

@@ -9,6 +9,7 @@ class AnswerType(str, Enum):
     ai = "ai"
     blocked = "blocked"
     template = "template"
+    failed = "failed"
     unanswered = "unanswered"
 
 

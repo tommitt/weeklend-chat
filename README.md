@@ -1,13 +1,13 @@
 # Weeklend Chat
 ⚡ The AI for your free time ⚡
 
+
 ## 🤔 What is it?
 Weeklend is a chatbot that operates on WhatsApp to provide recommendations on events, activities, bars, restaurants or places to go.
 
+
 ## 🔧 How is the repo structured?
-
 ### Chatbot
-
 #### 🪝 WhatsApp Webhook
 A webhook communicates with the WhatsApp Cloud API for receiving messages from the users and sending the appropriate answers back to them.
 
@@ -34,8 +34,8 @@ A vectorstore is used to store the embeddings associated to the events' descript
 
 *Main dependencies: [pinecone](https://github.com/pinecone-io/pinecone-python-client)*
 
-### Events data mining
 
+### Events data mining
 #### 🕷️ Web Scraper
 A scraper has been developed to retrieve events from certain websites.
 
@@ -47,22 +47,32 @@ An integration to retrieve the events inserted into a Google Form and saved into
 *Main dependencies: [google-api-python-client](https://github.com/googleapis/google-api-python-client)*
 
 
-
 ## 🚀 Where can I try it?
 Scan the QR code and start chatting with the deployed version:
 
 <center><img src="assets/weeklend-wa-qr.png" width="120" height="120"></center>
 
+
 ## 💻 How can I use the code?
+### Commands
 * The app main entry point sits at `app/main.py` and can be run with command: `uvicorn app.main:app`.
-* In the `interface/` folder there are a few UIs built with *[streamlit](https://github.com/streamlit/streamlit)* that can be used to interact with different parts of the app:
-  * `interface.uis.chatbot:ui`: a chatbot UI for chatting with the LLM connected to the vectorstore;
-  * `interface.uis.control_panel:ui`: a UI for loading events to the vectorstore, and running the web scrapers and Google Form integrations;
-  * `interface.uis.dashboard:ui`: a dashboard UI to visualize usage KPIs of the deployed app.
-* There is a main file controlling all UIs at `main_ui.py`, to use it:
-  * Activate the backend for the UIs with: `uvicorn interface.backend:app`;
-  * Run the streamlit frontend with: `streamlit run main_ui.py`.
 * To run tests use the command: `pytest`
+* When the database schema is modified, run a migration by following these steps:
+  * Generate a migration with: `alembic revision --autogenerate -m "Your migration title"`;
+  * Check the auto-generated migration file in `migrations/` folder and manually modify it if necessary;
+  * Upgrade the database schema with: `alembic upgrade head`.
+* There are a few UIs built to interact with different parts of the app, to use them:
+  * Activate the backend for the UIs with: `uvicorn interface.backend:app`;
+  * Run the frontend with: `streamlit run main_ui.py`.
+
+### User Interfaces
+The `interface/` folder contains the following UIs:
+* `interface.uis.chatbot:ui`: a chatbot UI for chatting with the LLM connected to the vectorstore;
+* `interface.uis.control_panel:ui`: a UI for loading events to the vectorstore, and running the web scrapers and Google Form integrations;
+* `interface.uis.dashboard:ui`: a dashboard UI to visualize usage KPIs of the deployed app.
+
+*Main dependencies: [streamlit](https://github.com/streamlit/streamlit), [pandas](https://github.com/pandas-dev/pandas), [altair](https://github.com/altair-viz/altair)*
+
 
 ## 🪂 How is it deployed?
 * The app is deployed as an AWS Lambda function.

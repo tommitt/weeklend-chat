@@ -9,39 +9,47 @@ from tenacity import retry, stop_after_attempt
 from app.db.enums import CityEnum
 from app.db.schemas import Event
 from app.db.services import get_event, register_event
+from app.utils.datetime_utils import convert_italian_month
 
 
 class BaseScraper:
+    _SOURCE_ROOT = "webscraper_"
+    _BASE_IDENTIFIER = "base"
+
+    def __init__(self, db: Session) -> None:
+        self.identifier = self._BASE_IDENTIFIER
+        self.output: list[Event] = []
+        self.db = db
+
+    @property
+    def source(self) -> str:
+        if self.identifier == self._BASE_IDENTIFIER:
+            raise Exception("Property source cannot be called with base class.")
+        return self._SOURCE_ROOT + self.identifier
+
     def get_timing_flags(
         self, opening_time: str, closing_time: str
     ) -> tuple[bool, bool]:
         """Format is expected to be 'HH:MM'"""
         is_during_day = int(opening_time.split(":")[0]) <= 18
         is_during_night = int(closing_time.split(":")[0]) >= 20
+        if not is_during_day and not is_during_night:
+            raise Exception("Event is neither during day or night.")
         return is_during_day, is_during_night
+
+    def is_event_in_db(self, event_url: str) -> bool:
+        db_event = get_event(db=self.db, source=self.source, url=event_url)
+        if db_event is None:
+            return False
+        return True
 
 
 class GuidatorinoScraper(BaseScraper):
-    _MONTHS_CONVERSION = {
-        " Gennaio ": "-01-",
-        " Febbraio ": "-02-",
-        " Marzo ": "-03-",
-        " Aprile ": "-04-",
-        " Maggio ": "-05-",
-        " Giugno ": "-06-",
-        " Luglio ": "-07-",
-        " Agosto ": "-08-",
-        " Settembre ": "-09-",
-        " Ottobre ": "-10-",
-        " Novembre ": "-11-",
-        " Dicembre ": "-12-",
-    }
-
-    def __init__(self) -> None:
+    def __init__(self, db: Session) -> None:
+        super().__init__(db=db)
         self.identifier: str = "guidatorino"
         self.root_url: str = "https://www.guidatorino.com/eventi-torino/"
         self.events_list: list[dict] = []
-        self.output: list[Event] = []
 
     def run_root_page(self) -> None:
         response = requests.get(self.root_url)
@@ -57,7 +65,11 @@ class GuidatorinoScraper(BaseScraper):
                 content = event.find("div", {"class", "eventlist-2"})
                 sub_contents = content.find_all("p")
 
-                event_dict["url"] = content.find("h3").find("a")["href"]
+                event_url = content.find("h3").find("a")["href"]
+                if self.is_event_in_db(event_url):
+                    continue
+
+                event_dict["url"] = event_url
                 event_dict["title"] = content.find("h3").find("a").text
 
                 categories = content.find("ul", {"class": "event-categories"})
@@ -68,12 +80,12 @@ class GuidatorinoScraper(BaseScraper):
                             event_dict["is_for_children"] = True
 
                 dates = [
-                    datetime.datetime.strptime(d.replace(key, val), "%d-%m-%Y").date()
+                    datetime.datetime.strptime(
+                        convert_italian_month(d), "%d %m %Y"
+                    ).date()
                     for d in sub_contents[0]
                     .find("span", {"class": "lista-data"})
                     .text.split(" - ")
-                    for key, val in self._MONTHS_CONVERSION.items()
-                    if key in d
                 ]
                 event_dict["start_date"] = dates[0]
                 event_dict["end_date"] = dates[0] if len(dates) == 1 else dates[1]
@@ -107,10 +119,11 @@ class GuidatorinoScraper(BaseScraper):
 
                 self.events_list.append(event_dict)
 
-            except:
+            except Exception as e:
+                logging.info(f"Skipping event for exception: {e}")
                 pass
 
-        logging.info(f"Got {len(self.events_list)} to be scraped.")
+        logging.info(f"Got {len(self.events_list)} new events to be scraped.")
 
     @retry(stop=stop_after_attempt(3))
     def run_event_pages(self) -> None:
@@ -173,33 +186,158 @@ class GuidatorinoScraper(BaseScraper):
         self.run_event_pages()
 
 
+class LovelangheScraper(BaseScraper):
+    def __init__(self, db: Session) -> None:
+        super().__init__(db=db)
+        self.identifier: str = "lovelanghe"
+        self.root_url: str = "https://langhe.net/eventi/"
+        self.page_url: str = "https://langhe.net/eventi/page/{page}/"
+        self.event_urls: list[str] = []
+
+    def run_root_page(self) -> None:
+        response = requests.get(self.root_url)
+        soup = BeautifulSoup(response.content, "html.parser")
+
+        last_page = int(
+            soup.find("div", {"class": "pagination pagination--event grid__pagination"})
+            .find_all("a")[-1]["href"]
+            .split("/")[-2]
+        )
+
+        for page in range(1, last_page + 1):
+            if page > 1:
+                response = requests.get(self.page_url.format(page=page))
+                soup = BeautifulSoup(response.content, "html.parser")
+
+            events = soup.find_all("li", {"itemscope": "itemscope"})
+            for event in events:
+                url = event["href"]
+                if not self.is_event_in_db(url):
+                    self.event_urls.append(url)
+
+    @retry(stop=stop_after_attempt(3))
+    def run_event_pages(self) -> None:
+        run_event_urls = self.event_urls.copy()
+        logging.info(f"Running {len(run_event_urls)} pages")
+        for i, url in enumerate(run_event_urls):
+            logging.info(f"{i+1}/{len(run_event_urls)}")
+
+            try:
+                response = requests.get(url)
+                soup = BeautifulSoup(response.content, "html.parser")
+
+                city, place = [
+                    s.strip()
+                    for s in soup.find(
+                        "h2", {"class", "t-event__surtitle uppercase--md"}
+                    ).text.split(b"\xe2\x80\x94".decode("utf-8"))
+                ]
+                is_countryside = False if city == "Torino" else True
+
+                title = soup.find("h1", {"class": "t-event__title condensed--xl"}).text
+                subtitle = soup.find("p", {"class": "t-event__subtitle serif--md"}).text
+
+                dates = soup.find_all("div", {"class": "dates__cell"})
+
+                start_date, end_date = [
+                    datetime.datetime.strptime(
+                        convert_italian_month(
+                            d.find("p", {"class": "dates__full"}).text
+                        ),
+                        "%d %m %Y",
+                    ).date()
+                    for d in dates
+                ]
+
+                opening_time = dates[0].find("p", {"class": "dates__time"}).text[5:]
+                closing_time_temp = dates[1].find("p", {"class": "dates__time"}).text
+                closing_time = (
+                    "24:00"
+                    if closing_time_temp == "fino a tarda notte"
+                    else closing_time_temp[5:]
+                )
+                is_during_day, is_during_night = self.get_timing_flags(
+                    opening_time, closing_time
+                )
+
+                contents = soup.find_all(
+                    "div",
+                    {
+                        "class",
+                        "content typography typography--dropcap-none base-section-col__content",
+                    },
+                )
+                text = contents[0].text.strip()
+                address = contents[1].text.strip()[11:]
+
+                description = "\n".join([title, subtitle, text])
+                location = " - ".join([place, address, city])
+
+                self.output.append(
+                    Event(
+                        description=description,
+                        is_vectorized=False,
+                        # metadata
+                        city=CityEnum.Torino,
+                        start_date=start_date,
+                        end_date=end_date,
+                        is_closed_mon=False,
+                        is_closed_tue=False,
+                        is_closed_wed=False,
+                        is_closed_thu=False,
+                        is_closed_fri=False,
+                        is_closed_sat=False,
+                        is_closed_sun=False,
+                        is_during_day=is_during_day,
+                        is_during_night=is_during_night,
+                        is_countryside=is_countryside,
+                        is_for_children=False,
+                        is_for_disabled=False,
+                        is_for_animals=False,
+                        # additional info
+                        name=title,
+                        location=location,
+                        url=url,
+                        price_level=None,
+                    )
+                )
+
+            except Exception as e:
+                logging.info(
+                    f"Failed to retrieve info from event at: {url}. Exception: {e}"
+                )
+                pass
+
+            self.event_urls.remove(url)
+
+    def run(self) -> None:
+        self.run_root_page()
+        self.run_event_pages()
+
+
 SCRAPER_SUPPORTED_SOURCES = {
     "guidatorino": GuidatorinoScraper,
+    "lovelanghe": LovelangheScraper,
 }
 
 
 class Scraper:
     def __init__(self, identifier: str, db: Session) -> None:
-        self.identifier = identifier
-        self.source = "webscraper_" + identifier
-        self.set_scraper()
         self.db = db
+        self.set_scraper(identifier)
 
-    def set_scraper(self) -> None:
-        if self.identifier not in SCRAPER_SUPPORTED_SOURCES:
-            raise Exception(
-                f"Scraper with identifier {self.identifier} is not supported."
-            )
-
-        self.scraper = SCRAPER_SUPPORTED_SOURCES[self.identifier]()
+    def set_scraper(self, identifier: str) -> None:
+        if identifier not in SCRAPER_SUPPORTED_SOURCES:
+            raise Exception(f"Scraper with identifier {identifier} is not supported.")
+        self.scraper = SCRAPER_SUPPORTED_SOURCES[identifier](db=self.db)
 
     def update_db(self) -> int:
         counter = 0
         for event in self.scraper.output:
-            db_event = get_event(db=self.db, source=self.source, url=event.url)
+            db_event = get_event(db=self.db, source=self.scraper.source, url=event.url)
             if db_event is None:
                 db_event = register_event(
-                    db=self.db, event_in=event, source=self.source
+                    db=self.db, event_in=event, source=self.scraper.source
                 )
                 counter += 1
 
@@ -207,7 +345,7 @@ class Scraper:
         return counter
 
     def run(self) -> None:
-        logging.info(f"Starting scraper for {self.identifier}.")
+        logging.info(f"Starting scraper for {self.scraper.identifier}.")
         self.scraper.run()
         num_inserted_events = self.update_db()
         logging.info(f"Inserted {num_inserted_events} new events.")

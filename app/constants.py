@@ -6,9 +6,12 @@ LIMIT_ANSWERS_PER_WEEK = 5
 LIMIT_BLOCKS_PER_WEEK = 3
 LIMIT_MAX_USERS = 500
 
+THRESHOLD_NOT_DELIVERED_ANSWER = 300  # in seconds
+
 # non-mutable
 TIMESTAMP_ORIGIN = "2023-01-01"
 FAKE_USER_ID = -1
+EMBEDDING_SIZE = 1536  # that's specific to OpenAIEmbeddings
 
 # from .env
 import os
