@@ -81,7 +81,7 @@ class GuidatorinoScraper(BaseScraper):
 
                 dates = [
                     datetime.datetime.strptime(
-                        convert_italian_month(d), "%d %B %Y"
+                        convert_italian_month(d), "%d %m %Y"
                     ).date()
                     for d in sub_contents[0]
                     .find("span", {"class": "lista-data"})
@@ -244,7 +244,7 @@ class LovelangheScraper(BaseScraper):
                         convert_italian_month(
                             d.find("p", {"class": "dates__full"}).text
                         ),
-                        "%d %B %Y",
+                        "%d %m %Y",
                     ).date()
                     for d in dates
                 ]
