@@ -1,5 +1,6 @@
 import datetime
 
+import pandas as pd
 from sqlalchemy import distinct, func
 from sqlalchemy.orm import Session
 
@@ -11,29 +12,10 @@ from app.db.schemas import DashboardOutput
 
 def get_dashboard_stats(
     db: Session, start_date: datetime.date, end_date: datetime.date
-) -> dict:
+) -> DashboardOutput:
     start_dt = datetime.datetime.combine(start_date, datetime.time.min)
     end_dt = datetime.datetime.combine(
         end_date + datetime.timedelta(days=1), datetime.time.min
-    )
-
-    users_count = (
-        db.query(func.count(distinct(ConversationORM.user_id)))
-        .filter(
-            ConversationORM.received_at.between(start_dt, end_dt),
-            ConversationORM.user_id != FAKE_USER_ID,
-        )
-        .scalar()
-    )
-
-    convs_count_by_type = (
-        db.query(ConversationORM.answer_type, func.count())
-        .filter(
-            ConversationORM.received_at.between(start_dt, end_dt),
-            ConversationORM.user_id != FAKE_USER_ID,
-        )
-        .group_by(ConversationORM.answer_type)
-        .all()
     )
 
     new_user_count = (
@@ -45,53 +27,44 @@ def get_dashboard_stats(
         .scalar()
     )
 
-    failed_convs_count = (
-        db.query(func.count(ConversationORM.id))
-        .filter(
-            ConversationORM.received_at.between(start_dt, end_dt),
-            ConversationORM.user_id == FAKE_USER_ID,
-        )
-        .scalar()
-    )
+    conversations_query = db.query(
+        ConversationORM.user_id,
+        ConversationORM.answer_type,
+        ConversationORM.received_at,
+        ConversationORM.registered_at,
+    ).filter(ConversationORM.received_at.between(start_dt, end_dt))
 
-    answers_ai_count = next(
-        (v for k, v in convs_count_by_type if k == AnswerType.ai), 0
+    df_all = pd.DataFrame(
+        conversations_query,
+        columns=["user_id", "answer_type", "received_at", "registered_at"],
     )
-    answers_template_count = next(
-        (v for k, v in convs_count_by_type if k == AnswerType.template), 0
-    )
-    answers_blocked_count = next(
-        (v for k, v in convs_count_by_type if k == AnswerType.blocked), 0
-    )
-    answers_failed_count = next(
-        (v for k, v in convs_count_by_type if k == AnswerType.failed), 0
-    )
-    answers_unanswered_count = next(
-        (v for k, v in convs_count_by_type if k == AnswerType.unanswered), 0
-    )
+    messages_count = df_all.shape[0]
 
-    convs_tot_count = (
-        answers_ai_count
-        + answers_template_count
-        + answers_blocked_count
-        + answers_failed_count
-        + answers_unanswered_count
-        + failed_convs_count
-    )
+    mask_fake_user = df_all["user_id"] == FAKE_USER_ID
+    df = df_all[~mask_fake_user]
+
+    users_count = len(df["user_id"].unique())
+
+    mask_ai = df["answer_type"] == AnswerType.ai
+    mask_template = df["answer_type"] == AnswerType.template
+    mask_blocked = df["answer_type"] == AnswerType.blocked
+    mask_failed = df["answer_type"] == AnswerType.failed
+    mask_unanswered = df["answer_type"] == AnswerType.unanswered
+
+    # TODO: add median and max waiting times
+    # answer_diff = (df[mask_ai]["registered_at"] - df[mask_ai]["received_at"]).dt.seconds
 
     return DashboardOutput(
         users=users_count,
         users_new=new_user_count,
         users_recurring=users_count - new_user_count,
-        conversations=convs_tot_count,
-        conversations_answered=(
-            answers_ai_count + answers_template_count + answers_blocked_count
-        ),
-        conversations_answered_ai=answers_ai_count,
+        conversations=messages_count,
+        conversations_answered=(sum(mask_ai) + sum(mask_template) + sum(mask_blocked)),
+        conversations_answered_ai=sum(mask_ai),
         conversations_answered_welcome_template=new_user_count,
-        conversations_answered_other_template=(answers_template_count - new_user_count),
-        conversations_answered_blocked=answers_blocked_count,
-        conversations_unanswered=answers_unanswered_count,
-        conversations_failed=failed_convs_count + answers_failed_count,
-        avg_messages_per_user=convs_tot_count / users_count,
+        conversations_answered_other_template=(sum(mask_template) - new_user_count),
+        conversations_answered_blocked=sum(mask_blocked),
+        conversations_unanswered=sum(mask_unanswered),
+        conversations_failed=sum(mask_fake_user) + sum(mask_failed),
+        avg_messages_per_user=messages_count / users_count if users_count > 0 else 0,
     )
