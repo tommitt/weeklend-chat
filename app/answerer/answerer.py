@@ -10,10 +10,10 @@ from langchain.tools.render import format_tool_to_openai_tool
 from sqlalchemy.orm import Session
 
 from app.answerer.prompts import SYSTEM_PROMPT
+from app.answerer.schemas import AnswerOutput
 from app.answerer.tools import search_events
 from app.constants import N_EVENTS_MAX
 from app.db.enums import AnswerType
-from app.db.schemas import AnswerOutput
 from app.utils.conn import get_llm
 
 

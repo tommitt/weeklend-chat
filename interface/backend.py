@@ -5,12 +5,13 @@ from fastapi import Depends, FastAPI, status
 from sqlalchemy.orm import Session
 
 from app.answerer.answerer import Answerer
+from app.answerer.schemas import AnswerOutput
 from app.db.db import get_db
-from app.db.schemas import AnswerOutput, DashboardOutput
 from app.loader.gform import GFormLoader
 from app.loader.loader import Loader
 from app.loader.scraper import Scraper
-from app.utils.dashboard import get_dashboard_stats
+from interface.utils.dashboard import get_dashboard_stats
+from interface.utils.schemas import ChatbotInput, DashboardOutput
 
 FASTAPI_URL = "http://127.0.0.1:8000"  # default localhost
 
@@ -20,16 +21,14 @@ app = FastAPI()
 
 @app.post("/chatbot", response_model=AnswerOutput)
 async def chatbot_api(
-    user_query: str,
-    ref_date: datetime.date,
-    previous_conversation: list[tuple],
+    chatbot_in: ChatbotInput,
     db: Session = Depends(get_db),
 ):
     agent = Answerer(db=db)
     response = agent.run(
-        user_query=user_query,
-        today_date=ref_date,
-        previous_conversation=previous_conversation,
+        user_query=chatbot_in.user_query,
+        today_date=chatbot_in.today_date,
+        previous_conversation=chatbot_in.previous_conversation,
     )
     return response
 

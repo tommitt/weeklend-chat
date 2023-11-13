@@ -118,31 +118,3 @@ class EventInVectorstore(BaseModel):
         event.end_date = date_to_timestamp(event.end_date)
 
         return event
-
-
-class WebhookPayload(BaseModel):
-    entry: list
-    object: str
-
-
-class AnswerOutput(BaseModel):
-    answer: str | None
-    type: AnswerType
-    used_event_ids: list[int] | None = None
-
-
-class DashboardOutput(BaseModel):
-    users: int
-    users_new: int
-    users_recurring: int
-
-    conversations: int
-    conversations_answered: int
-    conversations_answered_ai: int
-    conversations_answered_welcome_template: int
-    conversations_answered_other_template: int
-    conversations_answered_blocked: int
-    conversations_unanswered: int
-    conversations_failed: int
-
-    avg_messages_per_user: float

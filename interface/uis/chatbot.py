@@ -1,8 +1,9 @@
 import requests
 import streamlit as st
 
-from app.db.schemas import AnswerOutput
+from app.answerer.schemas import AnswerOutput
 from interface.backend import FASTAPI_URL
+from interface.utils.schemas import ChatbotInput
 
 
 def streamlit_to_langchain_conversation(messages: list[dict]) -> list[tuple]:
@@ -33,13 +34,13 @@ def ui() -> None:
         with st.spinner("Sto pensando..."):
             response = requests.post(
                 f"{FASTAPI_URL}/chatbot",
-                params={
-                    "user_query": user_query,
-                    "ref_date": ref_date,
-                    "previous_conversation": streamlit_to_langchain_conversation(
+                data=ChatbotInput(
+                    user_query=user_query,
+                    today_date=ref_date,
+                    previous_conversation=streamlit_to_langchain_conversation(
                         st.session_state["messages"]
                     ),
-                },
+                ).json(),
             )
             answer_out = AnswerOutput(**response.json())
 

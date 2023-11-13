@@ -15,6 +15,7 @@ from app.answerer.messages import (
     MESSAGE_WEEK_BLOCKS_LIMIT,
     MESSAGE_WELCOME,
 )
+from app.answerer.schemas import AnswerOutput, WebhookPayload
 from app.answerer.whatsapp_client import WhatsappWrapper
 from app.constants import (
     LIMIT_ANSWERS_PER_WEEK,
@@ -26,13 +27,7 @@ from app.constants import (
 from app.db.db import get_db
 from app.db.enums import AnswerType
 from app.db.models import UserORM
-from app.db.schemas import (
-    AnswerOutput,
-    ConversationTemp,
-    ConversationUpd,
-    User,
-    WebhookPayload,
-)
+from app.db.schemas import ConversationTemp, ConversationUpd, User
 from app.db.services import (
     block_user,
     delete_temp_conversation,

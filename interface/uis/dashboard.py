@@ -3,8 +3,8 @@ import pandas as pd
 import requests
 import streamlit as st
 
-from app.db.schemas import DashboardOutput
 from interface.backend import FASTAPI_URL
+from interface.utils.schemas import DashboardOutput
 
 
 def ui() -> None:
