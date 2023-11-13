@@ -22,11 +22,16 @@ class Answerer:
         self.db = db
         self.llm = get_llm()
 
-    def run(self, user_query: str, today_date: datetime.date) -> AnswerOutput:
-        # TODO: add previous conversations
+    def run(
+        self,
+        user_query: str,
+        today_date: datetime.date,
+        previous_conversation: list[tuple] = [],
+    ) -> AnswerOutput:
         prompt = ChatPromptTemplate.from_messages(
-            [
-                ("system", SYSTEM_PROMPT.format(k=N_EVENTS_MAX, today_date=today_date)),
+            [("system", SYSTEM_PROMPT.format(k=N_EVENTS_MAX, today_date=today_date))]
+            + previous_conversation
+            + [
                 ("human", "{user_query}"),
                 MessagesPlaceholder(variable_name="agent_scratchpad"),
             ]

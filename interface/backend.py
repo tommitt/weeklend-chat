@@ -20,10 +20,17 @@ app = FastAPI()
 
 @app.post("/chatbot", response_model=AnswerOutput)
 async def chatbot_api(
-    user_query: str, ref_date: datetime.date, db: Session = Depends(get_db)
+    user_query: str,
+    ref_date: datetime.date,
+    previous_conversation: list[tuple],
+    db: Session = Depends(get_db),
 ):
     agent = Answerer(db=db)
-    response = agent.run(user_query=user_query, today_date=ref_date)
+    response = agent.run(
+        user_query=user_query,
+        today_date=ref_date,
+        previous_conversation=previous_conversation,
+    )
     return response
 
 
