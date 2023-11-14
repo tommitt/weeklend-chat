@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from app.constants import FAKE_USER_ID
 from app.db.enums import AnswerType
 from app.db.models import ConversationORM, UserORM
-from app.db.schemas import DashboardOutput
+from interface.utils.schemas import DashboardOutput
 
 
 def get_dashboard_stats(
