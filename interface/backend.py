@@ -24,10 +24,9 @@ async def chatbot_api(
     chatbot_in: ChatbotInput,
     db: Session = Depends(get_db),
 ):
-    agent = Answerer(db=db)
+    agent = Answerer(db=db, today_date=chatbot_in.today_date)
     response = agent.run(
         user_query=chatbot_in.user_query,
-        today_date=chatbot_in.today_date,
         previous_conversation=chatbot_in.previous_conversation,
     )
     return response
