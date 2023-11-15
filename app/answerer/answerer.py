@@ -11,7 +11,7 @@ from langchain.tools import StructuredTool
 from langchain.tools.render import format_tool_to_openai_tool
 from sqlalchemy.orm import Session
 
-from app.answerer.prompts import SYSTEM_PROMPT
+from app.answerer.prompts import SEARCH_EVENTS_TOOL_DESCRIPTION, SYSTEM_PROMPT
 from app.answerer.schemas import AnswerOutput, SearchEventsToolInput
 from app.constants import N_EVENTS_CONTEXT, N_EVENTS_MAX
 from app.db.enums import AnswerType
@@ -138,7 +138,7 @@ class Answerer:
             [
                 (
                     "system",
-                    SYSTEM_PROMPT.format(k=N_EVENTS_MAX, today_date=self.today_date),
+                    SYSTEM_PROMPT.format(k=N_EVENTS_MAX),
                 )
             ]
             + previous_conversation
@@ -151,7 +151,9 @@ class Answerer:
         tools = [
             StructuredTool(
                 name="search_events",
-                description="Search available events that best answer the user's query.",
+                description=SEARCH_EVENTS_TOOL_DESCRIPTION.format(
+                    today_date=self.today_date
+                ),
                 args_schema=SearchEventsToolInput,
                 func=self.search_events,
             )
