@@ -1,5 +1,3 @@
-from app.constants import LIMIT_BLOCKS_PER_WEEK
-
 MESSAGE_WELCOME = """\
 Ciao! 👋 È un piacere conoscerti!
 
@@ -8,28 +6,6 @@ Chiedimi in chat che tipo di evento o attività stai cercando.
 
 Questa è una versione beta, e siamo attivi solamente a Torino e dintorni. \
 Avanti, troviamo le migliori esperienze per te! 💪🎉\
-"""
-
-MESSAGE_NOTHING_RELEVANT = """\
-Mi dispiace, sembra che al momento non ci siano eventi che corrispondano alle tue indicazioni. \
-Ma niente paura, possiamo cercare qualcosa di diverso insieme!
-Cosa ne dici di provare con una nuova ricerca? Sarà divertente! 😊🎉\
-"""
-
-MESSAGE_INVALID_QUERY = f"""\
-Mi dispiace, ma sembra che il tipo di richiesta che hai fatto non sia adatto alle mie capacità \
-di suggerire eventi e attività. 🙁
-
-Ricorda che siamo in fase beta e ciò significa che imponiamo un limite di \
-{LIMIT_BLOCKS_PER_WEEK} messaggi non validi alla settimana. \
-Quindi, scegli attentamente la prossima domanda in modo da poter continuare a \
-esplorare insieme fino alla fine della settimana! 😄📅\
-"""
-
-MESSAGE_ANSWER_NOT_NEEDED = """\
-Sembra che il tuo messaggio non richieda una risposta specifica. \
-Tuttavia, sono qui per te, quindi non esitare a chiedermi consigli su attività e eventi in qualsiasi momento! \
-Sarà un piacere aiutarti a trovare le migliori opzioni per il tuo tempo libero. 😊🎉\
 """
 
 MESSAGE_WAIT_FOR_ANSWER = """\
@@ -63,10 +39,6 @@ MESSAGE_GOT_UNBLOCKED = """\
 Che bello rivederti! \
 Posso nuovamente rispondere alle tue domande e cercare le migliori opzioni per te! \
 Avanti, cosa vorresti chiedermi oggi? 😄🎉\
-"""
-
-MESSAGE_AI_OUTRO = """\
-Vuoi lasciare un feedback? Scrivilo qua: www.weeklend.it/feedback\
 """
 
 MESSAGE_NOT_DELIVERED = """\
