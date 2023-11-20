@@ -14,13 +14,8 @@ A webhook communicates with the WhatsApp Cloud API for receiving messages from t
 *Main dependencies: [fastapi](https://github.com/tiangolo/fastapi)*
 
 #### 🤖 LLM
-When a message is received, an LLM is used for:
-* Extracting information from the message:
-  * whether it is valid or not;
-  * whether it needs recommendations or not;
-  * the date or dates range it refers to, if any;
-  * whether it refers to daytime, nighttime or both.
-* Generating the answer using the most relevant events retrieved from the vectorstore as context.
+An LLM agent is used when a message is received to decide whether to directly respond to the user or to call a function that searches for events in the vectorstore. When searching for the events, the LLM extracts the date (or date range) from the user's query as well as if it refers to daytime or nighttime.
+When the function is called, a second LLM evaluates the relevance of the retrieved events and formulates a response.
 
 *Main dependencies: [langchain](https://github.com/langchain-ai/langchain), [openai](https://github.com/openai/openai-python)*
 
