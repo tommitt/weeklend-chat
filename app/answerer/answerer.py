@@ -1,17 +1,22 @@
 import datetime
+import logging
 
-from langchain.agents import AgentExecutor
-from langchain.agents.format_scratchpad.openai_tools import (
-    format_to_openai_tool_messages,
-)
 from langchain.agents.output_parsers.openai_tools import OpenAIToolsAgentOutputParser
 from langchain.chains.query_constructor.ir import Comparison, Operation, StructuredQuery
-from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain.prompts import ChatPromptTemplate, PromptTemplate
+from langchain.prompts.chat import SystemMessagePromptTemplate
+from langchain.schema.agent import AgentFinish
+from langchain.schema.output_parser import StrOutputParser
+from langchain.schema.runnable import RunnableSerializable
 from langchain.tools import StructuredTool
 from langchain.tools.render import format_tool_to_openai_tool
 from sqlalchemy.orm import Session
 
-from app.answerer.prompts import SEARCH_EVENTS_TOOL_DESCRIPTION, SYSTEM_PROMPT
+from app.answerer.prompts import (
+    AGENT_SYSTEM_PROMPT,
+    RECOMMENDER_SYSTEM_PROMPT,
+    SEARCH_TOOL_DESCRIPTION,
+)
 from app.answerer.schemas import AnswerOutput, SearchEventsToolInput
 from app.constants import N_EVENTS_CONTEXT, N_EVENTS_MAX
 from app.db.enums import AnswerType
@@ -29,6 +34,7 @@ class Answerer:
         self.llm = get_llm()
         self.vectorstore = get_vectorstore()
         self.vectorstore_translator = get_vectorstore_translator()
+        self.set_search_tool()
 
     def search_events(
         self,
@@ -37,6 +43,7 @@ class Answerer:
         end_date: str | None = None,
         time: str | None = None,
     ) -> str:
+        """Search available events that are most relevant to the user's query."""
         # filter out events based on start and end dates
         start_date_dt = (
             self.today_date
@@ -120,7 +127,7 @@ class Answerer:
                     f"Event in vectorstore is not present in db (id={doc.metadata['id']})."
                 )
             doc_texts.append(
-                f"ID: {doc.metadata['id']}\n"
+                f"ID: {db_event.id}\n"
                 + f"Description: {doc.page_content}\n"
                 + (f"URL: {db_event.url}\n" if db_event.url is not None else "")
                 + (
@@ -131,51 +138,65 @@ class Answerer:
             )
         return "\n----------\n".join(doc_texts)
 
+    def set_search_tool(self) -> None:
+        """Set search tool for searching events."""
+        self.search_tool = StructuredTool(
+            name="search_events",
+            description=SEARCH_TOOL_DESCRIPTION.format(today_date=self.today_date),
+            args_schema=SearchEventsToolInput,
+            func=self.search_events,
+            return_direct=True,
+        )
+
+    def get_agent(self, previous_conversation: list[tuple]) -> RunnableSerializable:
+        """Get LLM agent that decides whether to search for events or directly answer."""
+        prompt = ChatPromptTemplate.from_messages(
+            [("system", AGENT_SYSTEM_PROMPT)]
+            + previous_conversation
+            + [("human", "{user_query}")]
+        )
+
+        return (
+            prompt
+            | self.llm.bind(tools=[format_tool_to_openai_tool(self.search_tool)])
+            | OpenAIToolsAgentOutputParser()
+        )
+
+    def get_recommender(
+        self, previous_conversation: list[tuple]
+    ) -> RunnableSerializable:
+        """Get LLM chain for recommending events given the searched events as context."""
+        system_prompt = SystemMessagePromptTemplate(
+            prompt=PromptTemplate.from_template(
+                template=RECOMMENDER_SYSTEM_PROMPT,
+                partial_variables={"k": N_EVENTS_MAX},
+            )
+        )
+
+        prompt = ChatPromptTemplate.from_messages(
+            [system_prompt] + previous_conversation + [("human", "{user_query}")]
+        )
+
+        return prompt | self.llm | StrOutputParser()
+
     def run(
         self, user_query: str, previous_conversation: list[tuple] = []
     ) -> AnswerOutput:
-        prompt = ChatPromptTemplate.from_messages(
-            [
-                (
-                    "system",
-                    SYSTEM_PROMPT.format(k=N_EVENTS_MAX),
-                )
-            ]
-            + previous_conversation
-            + [
-                ("human", "{user_query}"),
-                MessagesPlaceholder(variable_name="agent_scratchpad"),
-            ]
-        )
-
-        tools = [
-            StructuredTool(
-                name="search_events",
-                description=SEARCH_EVENTS_TOOL_DESCRIPTION.format(
-                    today_date=self.today_date
-                ),
-                args_schema=SearchEventsToolInput,
-                func=self.search_events,
+        """Run answerer on user query - it routes the LLM and tool calls."""
+        agent = self.get_agent(previous_conversation)
+        agent_output = agent.invoke({"user_query": user_query})
+        if isinstance(agent_output, AgentFinish):
+            # TODO: add AnswerType.conversational
+            return AnswerOutput(
+                answer=agent_output.return_values["output"], type=AnswerType.template
             )
-        ]
 
-        agent = (
-            {
-                "user_query": lambda x: x["user_query"],
-                "agent_scratchpad": lambda x: format_to_openai_tool_messages(
-                    x["intermediate_steps"]
-                ),
-            }
-            | prompt
-            | self.llm.bind(tools=[format_tool_to_openai_tool(tool) for tool in tools])
-            | OpenAIToolsAgentOutputParser()
+        recommender = self.get_recommender(previous_conversation)
+        tool_input = SearchEventsToolInput(**agent_output[0].tool_input)
+        logging.info(f"Calling {self.search_tool.name} tool with input: {tool_input}")
+        context = self.search_tool.run(tool_input.dict())
+        recommender_output = recommender.invoke(
+            {"user_query": user_query, "context": context}
         )
-        agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
-
-        agent_output = agent_executor.invoke({"user_query": user_query})
-
-        return AnswerOutput(
-            answer=agent_output["output"],
-            type=AnswerType.ai,
-            # TODO: get used_event_ids=json.dumps([])
-        )
+        # TODO: add used_event_ids
+        return AnswerOutput(answer=recommender_output, type=AnswerType.ai)

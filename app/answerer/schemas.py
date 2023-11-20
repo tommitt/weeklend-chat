@@ -17,12 +17,12 @@ class AnswerOutput(BaseModel):
 
 
 class SearchEventsToolInput(BaseModel):
-    user_query: str = Field(description="The user's query.")
+    user_query: str = Field(description="The user's query")
     start_date: Optional[str] = Field(
-        description="The start date of the range in format 'YYYY-MM-DD'."
+        description="The start date of the range in format 'YYYY-MM-DD'"
     )
     end_date: Optional[str] = Field(
-        description="The end date of the range in format 'YYYY-MM-DD'."
+        description="The end date of the range in format 'YYYY-MM-DD'"
     )
     time: Optional[str] = Field(
         description="This is the time of the day. It can be either 'daytime', 'nighttime' or 'both'"
