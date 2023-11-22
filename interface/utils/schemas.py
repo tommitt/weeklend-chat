@@ -17,6 +17,7 @@ class DashboardOutput(BaseModel):
     conversations: int
     conversations_answered: int
     conversations_answered_ai: int
+    conversations_answered_conversational: int
     conversations_answered_welcome_template: int
     conversations_answered_other_template: int
     conversations_answered_blocked: int

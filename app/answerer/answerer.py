@@ -186,9 +186,10 @@ class Answerer:
         agent = self.get_agent(previous_conversation)
         agent_output = agent.invoke({"user_query": user_query})
         if isinstance(agent_output, AgentFinish):
-            # TODO: add AnswerType.conversational
+            # TODO: flag AnswerType.blocked events
             return AnswerOutput(
-                answer=agent_output.return_values["output"], type=AnswerType.template
+                answer=agent_output.return_values["output"],
+                type=AnswerType.conversational,
             )
 
         recommender = self.get_recommender(previous_conversation)

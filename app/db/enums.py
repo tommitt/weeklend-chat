@@ -6,11 +6,14 @@ class CityEnum(str, Enum):
 
 
 class AnswerType(str, Enum):
-    ai = "ai"
-    blocked = "blocked"
-    template = "template"
-    failed = "failed"
-    unanswered = "unanswered"
+    """Type of answers to send to the user."""
+
+    ai = "ai"  # ai answer with events recommendations
+    blocked = "blocked"  # ai blocked message for invalid query
+    conversational = "conversational"  # ai conversational answer
+    failed = "failed"  # answer failed to be elaborated
+    template = "template"  # template message
+    unanswered = "unanswered"  # no answer delivered
 
 
 class PriceLevel(str, Enum):
