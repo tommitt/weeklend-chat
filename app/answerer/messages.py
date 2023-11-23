@@ -8,10 +8,6 @@ Questa è una versione beta, e siamo attivi solamente a Torino e dintorni. \
 Avanti, troviamo le migliori esperienze per te! 💪🎉\
 """
 
-MESSAGE_WAIT_FOR_ANSWER = """\
-Sto pensando... torno in 30 secondi 🏃\
-"""
-
 MESSAGE_WEEK_ANSWERS_LIMIT = """\
 Grazie mille per usare Weeklend così assiduamente!
 Siamo in fase di beta e al momento possiamo accettare solo {limit_per_week} richieste a settimana, \
