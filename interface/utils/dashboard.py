@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from app.constants import FAKE_USER_ID
 from app.db.enums import AnswerType
 from app.db.models import ConversationORM, UserORM
-from app.db.schemas import DashboardOutput
+from interface.utils.schemas import DashboardOutput
 
 
 def get_dashboard_stats(
@@ -46,9 +46,10 @@ def get_dashboard_stats(
     users_count = len(df["user_id"].unique())
 
     mask_ai = df["answer_type"] == AnswerType.ai
-    mask_template = df["answer_type"] == AnswerType.template
     mask_blocked = df["answer_type"] == AnswerType.blocked
+    mask_conversational = df["answer_type"] == AnswerType.conversational
     mask_failed = df["answer_type"] == AnswerType.failed
+    mask_template = df["answer_type"] == AnswerType.template
     mask_unanswered = df["answer_type"] == AnswerType.unanswered
 
     # TODO: add median and max waiting times
@@ -59,8 +60,14 @@ def get_dashboard_stats(
         users_new=new_user_count,
         users_recurring=users_count - new_user_count,
         conversations=messages_count,
-        conversations_answered=(sum(mask_ai) + sum(mask_template) + sum(mask_blocked)),
+        conversations_answered=(
+            sum(mask_ai)
+            + sum(mask_conversational)
+            + sum(mask_template)
+            + sum(mask_blocked)
+        ),
         conversations_answered_ai=sum(mask_ai),
+        conversations_answered_conversational=sum(mask_conversational),
         conversations_answered_welcome_template=new_user_count,
         conversations_answered_other_template=(sum(mask_template) - new_user_count),
         conversations_answered_blocked=sum(mask_blocked),

@@ -1,112 +1,71 @@
 import datetime
 import logging
 
+from langchain.agents.output_parsers.openai_tools import OpenAIToolsAgentOutputParser
 from langchain.chains.query_constructor.ir import Comparison, Operation, StructuredQuery
-from langchain.docstore.document import Document
-from langchain.output_parsers import ResponseSchema, StructuredOutputParser
-from langchain.prompts import ChatPromptTemplate
+from langchain.prompts import ChatPromptTemplate, PromptTemplate
+from langchain.prompts.chat import SystemMessagePromptTemplate
+from langchain.schema.agent import AgentFinish
+from langchain.schema.output_parser import StrOutputParser
+from langchain.schema.runnable import RunnableSerializable
+from langchain.tools import StructuredTool
+from langchain.tools.render import format_tool_to_openai_tool
 from sqlalchemy.orm import Session
 
-from app.answerer.messages import (
-    MESSAGE_AI_OUTRO,
-    MESSAGE_ANSWER_NOT_NEEDED,
-    MESSAGE_INVALID_QUERY,
-    MESSAGE_NOTHING_RELEVANT,
-)
 from app.answerer.prompts import (
-    PROMPT_CONTEXT_ANSWER,
-    PROMPT_EXTRACT_FILTERS,
-    RSCHEMA_ANSWER_EVENT_ID,
-    RSCHEMA_ANSWER_EVENT_SUMMARY,
-    RSCHEMA_ANSWER_INTRO,
-    RSCHEMA_EXTRACT_DATE,
-    RSCHEMA_EXTRACT_INVALID,
-    RSCHEMA_EXTRACT_RECOMMENDATIONS,
-    RSCHEMA_EXTRACT_TIME,
+    AGENT_SYSTEM_PROMPT,
+    RECOMMENDER_SYSTEM_PROMPT,
+    SEARCH_TOOL_DESCRIPTION,
 )
+from app.answerer.schemas import AnswerOutput, SearchEventsToolInput
 from app.constants import N_EVENTS_CONTEXT, N_EVENTS_MAX
 from app.db.enums import AnswerType
-from app.db.schemas import AnswerOutput
 from app.db.services import get_event_by_id
 from app.utils.conn import get_llm, get_vectorstore, get_vectorstore_translator
 from app.utils.datetime_utils import date_to_timestamp
 
 
 class Answerer:
-    def __init__(self, db: Session) -> None:
+    def __init__(self, db: Session, today_date: datetime.date | None = None) -> None:
         self.db = db
+        self.today_date = (
+            today_date if today_date is not None else datetime.date.today()
+        )
         self.llm = get_llm()
         self.vectorstore = get_vectorstore()
         self.vectorstore_translator = get_vectorstore_translator()
+        self.set_search_tool()
 
-    def run_extract_filters(
-        self, user_query: str, today_date: datetime.date
-    ) -> tuple[bool, bool, dict]:
-        """Self-query to extract filters for later retrieval"""
-        prompt = ChatPromptTemplate.from_template(template=PROMPT_EXTRACT_FILTERS)
-
-        output_parser = StructuredOutputParser.from_response_schemas(
-            [
-                ResponseSchema(
-                    name="query_is_invalid",
-                    description=RSCHEMA_EXTRACT_INVALID,
-                    type="boolean",
-                ),
-                ResponseSchema(
-                    name="query_needs_recommendations",
-                    description=RSCHEMA_EXTRACT_RECOMMENDATIONS,
-                    type="boolean",
-                ),
-                ResponseSchema(
-                    name="query_start_date",
-                    description=RSCHEMA_EXTRACT_DATE.format(start_end="start"),
-                ),
-                ResponseSchema(
-                    name="query_end_date",
-                    description=RSCHEMA_EXTRACT_DATE.format(start_end="end"),
-                ),
-                ResponseSchema(name="query_time", description=RSCHEMA_EXTRACT_TIME),
-            ]
+    def search_events(
+        self,
+        user_query: str,
+        start_date: str | None = None,
+        end_date: str | None = None,
+        time: str | None = None,
+    ) -> str:
+        """Search available events that are most relevant to the user's query."""
+        # filter out events based on start and end dates
+        start_date_dt = (
+            self.today_date
+            if start_date is None
+            else datetime.datetime.strptime(start_date, "%Y-%m-%d").date()
         )
-
-        response_raw = self.llm(
-            prompt.format_messages(
-                today_date=today_date.strftime("%Y-%m-%d (%A)"),
-                user_query=user_query,
-                format_instructions=output_parser.get_format_instructions(),
-            )
-        )
-        response = output_parser.parse(response_raw.content)
-
-        logging.info(
-            "\n".join([f"Filter {key}: {response[key]}" for key in response.keys()])
-        )
-
-        start_date = (
-            today_date
-            if response["query_start_date"] == "NO_DATE"
-            else datetime.datetime.strptime(
-                response["query_start_date"], "%Y-%m-%d"
-            ).date()
-        )
-        end_date = (
-            today_date + datetime.timedelta(days=6)
-            if response["query_end_date"] == "NO_DATE"
-            else datetime.datetime.strptime(
-                response["query_end_date"], "%Y-%m-%d"
-            ).date()
+        end_date_dt = (
+            self.today_date + datetime.timedelta(days=6)
+            if end_date is None
+            else datetime.datetime.strptime(end_date, "%Y-%m-%d").date()
         )
 
         filters = [
             Comparison(
                 comparator="lte",
                 attribute="start_date",
-                value=date_to_timestamp(end_date),
+                value=date_to_timestamp(end_date_dt),
             ),
             Comparison(
                 comparator="gte",
                 attribute="end_date",
-                value=date_to_timestamp(start_date),
+                value=date_to_timestamp(start_date_dt),
             ),
         ]
 
@@ -117,8 +76,8 @@ class Answerer:
         # the filter becomes: OR(NOT closed on Monday, NOT closed on Tuesday)
         days_of_week_in_range = set(
             [
-                (start_date + datetime.timedelta(days=i)).strftime("%A")
-                for i in range((end_date - start_date).days + 1)
+                (start_date_dt + datetime.timedelta(days=i)).strftime("%A")
+                for i in range((end_date_dt - start_date_dt).days + 1)
             ]
         )
 
@@ -132,19 +91,20 @@ class Answerer:
             "Sunday": "is_closed_sun",
         }
         filters_closed_days = []
-        for day_of_week, db_attribute in map_closed_days.items():
+        for day_of_week, attribute in map_closed_days.items():
             if day_of_week in days_of_week_in_range:
                 filters_closed_days.append(
-                    Comparison(comparator="eq", attribute=db_attribute, value=False)
+                    Comparison(comparator="eq", attribute=attribute, value=False)
                 )
 
         filters.append(Operation(operator="or", arguments=filters_closed_days))
 
-        if response["query_time"] == "daytime":
+        # filter out events based on time of the day
+        if time == "daytime":
             filters.append(
                 Comparison(comparator="eq", attribute="is_during_day", value=True)
             )
-        elif response["query_time"] == "nighttime":
+        elif time == "nighttime":
             filters.append(
                 Comparison(comparator="eq", attribute="is_during_night", value=True)
             )
@@ -155,112 +115,91 @@ class Answerer:
             )
         )
 
-        return (
-            response["query_is_invalid"],
-            response["query_needs_recommendations"],
-            filter_kwargs,
-        )
-
-    def run_generate_answer(
-        self, user_query: str, docs: list[Document]
-    ) -> AnswerOutput:
-        prompt = ChatPromptTemplate.from_template(template=PROMPT_CONTEXT_ANSWER)
-
-        output_parser = StructuredOutputParser.from_response_schemas(
-            [ResponseSchema(name="intro", description=RSCHEMA_ANSWER_INTRO)]
-            + [
-                rs
-                for i in range(N_EVENTS_MAX)
-                for rs in (
-                    ResponseSchema(
-                        name=f"event_id_{i+1}",
-                        description=RSCHEMA_ANSWER_EVENT_ID.format(number=i + 1),
-                        type="integer",
-                    ),
-                    ResponseSchema(
-                        name=f"event_summary_{i+1}",
-                        description=RSCHEMA_ANSWER_EVENT_SUMMARY.format(number=i + 1),
-                    ),
-                )
-            ]
-        )
-
-        response_raw = self.llm(
-            prompt.format_messages(
-                context="\n\n".join(
-                    [
-                        f"ID {doc.metadata['id']}:\n```{doc.page_content}```"
-                        for doc in docs
-                    ]
-                ),
-                user_query=user_query,
-                k=N_EVENTS_MAX,
-                format_instructions=output_parser.get_format_instructions(),
-            )
-        )
-        response = output_parser.parse(response_raw.content)
-
-        recommendation_ids = [
-            response[f"event_id_{i+1}"]
-            for i in range(N_EVENTS_MAX)
-            if response[f"event_id_{i+1}"] != 0
-        ]
-        if len(recommendation_ids) == 0:
-            return AnswerOutput(
-                answer=response["intro"],
-                type=AnswerType.template,
-            )
-
-        recommendation_summaries = []
-        for i, event_id in enumerate(recommendation_ids):
-            db_event = get_event_by_id(db=self.db, id=event_id)
-            if db_event is None:
-                raise Exception(
-                    f"Event in vectorstore is not present in db (id={event_id})."
-                )
-
-            recommendation_summaries.append(
-                f"{i+1}. "
-                + response[f"event_summary_{i+1}"]
-                + (f"\n📍 {db_event.location}" if db_event.location is not None else "")
-                + (f"\n🌐 {db_event.url}" if db_event.url is not None else "")
-                + (
-                    f"\n💰 {db_event.price_level}"
-                    if db_event.price_level is not None
-                    else ""
-                )
-            )
-
-        elaborated_answer = "\n\n".join(
-            [response["intro"]] + recommendation_summaries + [MESSAGE_AI_OUTRO]
-        )
-
-        return AnswerOutput(
-            answer=elaborated_answer,
-            type=AnswerType.ai,
-            used_event_ids=recommendation_ids,
-        )
-
-    def run(self, user_query: str, today_date: datetime.date) -> AnswerOutput:
-        is_invalid, needs_recommendations, filter_kwargs = self.run_extract_filters(
-            user_query=user_query, today_date=today_date
-        )
-
-        if is_invalid:
-            return AnswerOutput(answer=MESSAGE_INVALID_QUERY, type=AnswerType.blocked)
-
-        if not needs_recommendations:
-            return AnswerOutput(
-                answer=MESSAGE_ANSWER_NOT_NEEDED, type=AnswerType.template
-            )
-
         relevant_docs = self.vectorstore.similarity_search(
             user_query, k=N_EVENTS_CONTEXT, **filter_kwargs
         )
 
-        if not len(relevant_docs):
-            return AnswerOutput(
-                answer=MESSAGE_NOTHING_RELEVANT, type=AnswerType.template
+        doc_texts = []
+        for doc in relevant_docs:
+            db_event = get_event_by_id(db=self.db, id=doc.metadata["id"])
+            if db_event is None:
+                raise Exception(
+                    f"Event in vectorstore is not present in db (id={doc.metadata['id']})."
+                )
+            doc_texts.append(
+                f"ID: {db_event.id}\n"
+                + f"Description: {doc.page_content}\n"
+                + (f"URL: {db_event.url}\n" if db_event.url is not None else "")
+                + (
+                    f"Location: {db_event.location}\n"
+                    if db_event.location is not None
+                    else ""
+                )
             )
-        else:
-            return self.run_generate_answer(user_query=user_query, docs=relevant_docs)
+        return "\n----------\n".join(doc_texts)
+
+    def set_search_tool(self) -> None:
+        """Set search tool for searching events."""
+        self.search_tool = StructuredTool(
+            name="search_events",
+            description=SEARCH_TOOL_DESCRIPTION.format(today_date=self.today_date),
+            args_schema=SearchEventsToolInput,
+            func=self.search_events,
+            return_direct=True,
+        )
+
+    def get_agent(
+        self, previous_conversation: list[tuple[str, str]]
+    ) -> RunnableSerializable:
+        """Get LLM agent that decides whether to search for events or directly answer."""
+        prompt = ChatPromptTemplate.from_messages(
+            [("system", AGENT_SYSTEM_PROMPT)]
+            + previous_conversation
+            + [("human", "{user_query}")]
+        )
+
+        return (
+            prompt
+            | self.llm.bind(tools=[format_tool_to_openai_tool(self.search_tool)])
+            | OpenAIToolsAgentOutputParser()
+        )
+
+    def get_recommender(
+        self, previous_conversation: list[tuple[str, str]]
+    ) -> RunnableSerializable:
+        """Get LLM chain for recommending events given the searched events as context."""
+        system_prompt = SystemMessagePromptTemplate(
+            prompt=PromptTemplate.from_template(
+                template=RECOMMENDER_SYSTEM_PROMPT,
+                partial_variables={"k": N_EVENTS_MAX},
+            )
+        )
+
+        prompt = ChatPromptTemplate.from_messages(
+            [system_prompt] + previous_conversation + [("human", "{user_query}")]
+        )
+
+        return prompt | self.llm | StrOutputParser()
+
+    def run(
+        self, user_query: str, previous_conversation: list[tuple[str, str]] = []
+    ) -> AnswerOutput:
+        """Run answerer on user query - it routes the LLM and tool calls."""
+        agent = self.get_agent(previous_conversation)
+        agent_output = agent.invoke({"user_query": user_query})
+        if isinstance(agent_output, AgentFinish):
+            # TODO: flag AnswerType.blocked events
+            return AnswerOutput(
+                answer=agent_output.return_values["output"],
+                type=AnswerType.conversational,
+            )
+
+        recommender = self.get_recommender(previous_conversation)
+        tool_input = SearchEventsToolInput(**agent_output[0].tool_input)
+        logging.info(f"Calling {self.search_tool.name} tool with input: {tool_input}")
+        context = self.search_tool.run(tool_input.dict())
+        recommender_output = recommender.invoke(
+            {"user_query": user_query, "context": context}
+        )
+        # TODO: add used_event_ids
+        return AnswerOutput(answer=recommender_output, type=AnswerType.ai)

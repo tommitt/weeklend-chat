@@ -3,8 +3,8 @@ import pandas as pd
 import requests
 import streamlit as st
 
-from app.db.schemas import DashboardOutput
 from interface.backend import FASTAPI_URL
+from interface.utils.schemas import DashboardOutput
 
 
 def ui() -> None:
@@ -76,13 +76,15 @@ def ui() -> None:
         col_answers.subheader("Answered messages")
         show_donut_chart_with_df(
             categories=[
-                "AI",
+                "AI recommendation",
+                "AI conversational",
                 "Welcome template",
                 "Other template",
                 "Blocked",
             ],
             values=[
                 st.session_state.dashboard_out.conversations_answered_ai,
+                st.session_state.dashboard_out.conversations_answered_conversational,
                 st.session_state.dashboard_out.conversations_answered_welcome_template,
                 st.session_state.dashboard_out.conversations_answered_other_template,
                 st.session_state.dashboard_out.conversations_answered_blocked,

@@ -1,8 +1,16 @@
 import requests
 import streamlit as st
 
-from app.db.schemas import AnswerOutput
+from app.answerer.schemas import AnswerOutput
 from interface.backend import FASTAPI_URL
+from interface.utils.schemas import ChatbotInput
+
+
+def streamlit_to_langchain_conversation(messages: list[dict]) -> list[tuple]:
+    conversation = []
+    for message in messages:
+        conversation.append((message["role"], message["content"]))
+    return conversation
 
 
 def ui() -> None:
@@ -10,12 +18,7 @@ def ui() -> None:
 
     if "init_chatbot" not in st.session_state:
         st.session_state["init_chatbot"] = True
-        st.session_state["messages"] = [
-            {
-                "role": "assistant",
-                "content": "Ciao Weeklender! 👋🏻\nVuoi consigli su cosa fare a Torino?",
-            }
-        ]
+        st.session_state["messages"] = []
 
     ref_date = st.date_input("Data di riferimento")
 
@@ -31,7 +34,13 @@ def ui() -> None:
         with st.spinner("Sto pensando..."):
             response = requests.post(
                 f"{FASTAPI_URL}/chatbot",
-                params={"user_query": user_query, "ref_date": ref_date},
+                data=ChatbotInput(
+                    user_query=user_query,
+                    today_date=ref_date,
+                    previous_conversation=streamlit_to_langchain_conversation(
+                        st.session_state["messages"]
+                    ),
+                ).json(),
             )
             answer_out = AnswerOutput(**response.json())
 
