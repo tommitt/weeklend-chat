@@ -148,7 +148,9 @@ class Answerer:
             return_direct=True,
         )
 
-    def get_agent(self, previous_conversation: list[tuple]) -> RunnableSerializable:
+    def get_agent(
+        self, previous_conversation: list[tuple[str, str]]
+    ) -> RunnableSerializable:
         """Get LLM agent that decides whether to search for events or directly answer."""
         prompt = ChatPromptTemplate.from_messages(
             [("system", AGENT_SYSTEM_PROMPT)]
@@ -163,7 +165,7 @@ class Answerer:
         )
 
     def get_recommender(
-        self, previous_conversation: list[tuple]
+        self, previous_conversation: list[tuple[str, str]]
     ) -> RunnableSerializable:
         """Get LLM chain for recommending events given the searched events as context."""
         system_prompt = SystemMessagePromptTemplate(
@@ -180,7 +182,7 @@ class Answerer:
         return prompt | self.llm | StrOutputParser()
 
     def run(
-        self, user_query: str, previous_conversation: list[tuple] = []
+        self, user_query: str, previous_conversation: list[tuple[str, str]] = []
     ) -> AnswerOutput:
         """Run answerer on user query - it routes the LLM and tool calls."""
         agent = self.get_agent(previous_conversation)

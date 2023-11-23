@@ -2,7 +2,7 @@ import datetime
 
 import pinecone
 from fastapi import HTTPException
-from sqlalchemy import func
+from sqlalchemy import desc, func
 from sqlalchemy.orm import Session
 
 from app.constants import (
@@ -100,8 +100,35 @@ def register_user(db: Session, user_in: User) -> UserORM:
 
 
 # Conversation
-def get_conversation(db: Session, wa_id: str) -> ConversationORM | None:
+def get_conversation_by_waid(db: Session, wa_id: str) -> ConversationORM | None:
+    """Get single conversation from the WhatsApp ID."""
     return db.query(ConversationORM).filter(ConversationORM.wa_id == wa_id).first()
+
+
+def get_user_conversations(
+    db: Session,
+    user_id: int,
+    from_datetime: datetime.datetime | None,
+    max_messages: int = 100,
+) -> list[ConversationORM]:
+    """
+    Get last conversations of a user from a certain datetime.
+    Conversations are returned ordered from the oldest to the newest.
+    """
+    return (
+        db.query(ConversationORM)
+        .filter(
+            ConversationORM.user_id == user_id,
+            (
+                ConversationORM.registered_at >= from_datetime
+                if from_datetime is not None
+                else True
+            ),
+        )
+        .order_by(desc(ConversationORM.id))
+        .limit(max_messages)
+        .all()
+    )[::-1]
 
 
 def register_conversation(
@@ -121,7 +148,7 @@ def register_temp_conversation(
     db: Session, conversation_temp_in: ConversationTemp
 ) -> ConversationORM:
     """
-    Conversation is registered temporarily without no answer to avoid
+    Conversation is registered temporarily with no answer to avoid
     accepting a request with the same message while it is being processed.
     """
     fake_user = get_user_by_id(db=db, id=FAKE_USER_ID)

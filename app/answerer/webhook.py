@@ -18,6 +18,8 @@ from app.answerer.messages import (
 from app.answerer.schemas import AnswerOutput, WebhookPayload
 from app.answerer.whatsapp_client import WhatsappWrapper
 from app.constants import (
+    CONVERSATION_HOURS_WINDOW,
+    CONVERSATION_MAX_MESSAGES,
     LIMIT_ANSWERS_PER_WEEK,
     LIMIT_BLOCKS_PER_WEEK,
     LIMIT_MAX_USERS,
@@ -31,9 +33,10 @@ from app.db.schemas import ConversationTemp, ConversationUpd, User
 from app.db.services import (
     block_user,
     delete_temp_conversation,
-    get_conversation,
+    get_conversation_by_waid,
     get_user,
     get_user_answers_count,
+    get_user_conversations,
     get_user_count,
     register_temp_conversation,
     register_user,
@@ -166,6 +169,24 @@ def check_user_limits(db: Session, db_user: UserORM) -> AnswerOutput | None:
     return None
 
 
+def get_previous_conversation(db: Session, user_id: int) -> list[tuple[str, str]]:
+    db_conversations = get_user_conversations(
+        db=db,
+        user_id=user_id,
+        from_datetime=(
+            datetime.datetime.now()
+            - datetime.timedelta(hours=CONVERSATION_HOURS_WINDOW)
+        ),
+        max_messages=CONVERSATION_MAX_MESSAGES,
+    )
+    llm_conversations = []
+    for db_conversation in db_conversations:
+        llm_conversations.append(("human", db_conversation.from_message))
+        if db_conversation.answer_type != AnswerType.unanswered:
+            llm_conversations.append(("ai", db_conversation.to_message))
+    return llm_conversations
+
+
 def standard_user_journey(
     db: Session, client: WhatsappWrapper, db_user: UserORM, user_query: str
 ) -> AnswerOutput:
@@ -176,8 +197,10 @@ def standard_user_journey(
             to_phone_number=db_user.phone_number, message=MESSAGE_WAIT_FOR_ANSWER
         )
         agent = Answerer(db=db)
-        # TODO: add previous_conversation
-        output = agent.run(user_query)
+        output = agent.run(
+            user_query,
+            previous_conversation=get_previous_conversation(db=db, user_id=db_user.id),
+        )
 
     return output
 
@@ -209,7 +232,7 @@ async def handle_post_request(
         message_timestamp = int(message["timestamp"])
         current_timestamp = datetime.datetime.utcnow().timestamp()
 
-        db_conversation = get_conversation(db=db, wa_id=wa_id)
+        db_conversation = get_conversation_by_waid(db=db, wa_id=wa_id)
         if db_conversation is not None:
             return Response(
                 content="Not answering - message already processed.",
