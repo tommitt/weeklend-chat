@@ -14,8 +14,9 @@ from app.db.services import get_event, register_event
 GFORM_SUPPORTED_SOURCES = {
     # maps source identifier to sheet name
     "wklndteam": "Risposte del modulo partner program Wklnd Team",
+    "website": "Risposte del modulo - Sito",
     "lestrade": "Risposte del modulo partner program LeStrade",
-    "giuliam&c": "Risposte del modulo partner program GiuliaM&C",
+    "camera": "Risposte del modulo Biz Camera",
 }
 
 
