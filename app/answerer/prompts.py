@@ -44,8 +44,8 @@ Your answer should be in the following format:
 
 1. *<event title>*
 Descrizione: <event summary>
-URL: <event url>
 Luogo: <event location>
+URL: <event url>
 
 <...>
 

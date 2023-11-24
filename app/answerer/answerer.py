@@ -129,12 +129,12 @@ class Answerer:
             doc_texts.append(
                 f"ID: {db_event.id}\n"
                 + f"Description: {doc.page_content}\n"
-                + (f"URL: {db_event.url}\n" if db_event.url is not None else "")
                 + (
                     f"Location: {db_event.location}\n"
                     if db_event.location is not None
                     else ""
                 )
+                + (f"URL: {db_event.url}\n" if db_event.url is not None else "")
             )
         return "\n----------\n".join(doc_texts)
 
