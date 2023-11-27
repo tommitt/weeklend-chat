@@ -4,7 +4,7 @@ import logging
 from fastapi import Depends, FastAPI, status
 from sqlalchemy.orm import Session
 
-from app.answerer.answerer import Answerer
+from app.answerer.push.agent import AiAgent
 from app.answerer.schemas import AnswerOutput
 from app.db.db import get_db
 from app.loader.gform import GFormLoader
@@ -24,7 +24,7 @@ async def chatbot_api(
     chatbot_in: ChatbotInput,
     db: Session = Depends(get_db),
 ):
-    agent = Answerer(db=db, today_date=chatbot_in.today_date)
+    agent = AiAgent(db=db, today_date=chatbot_in.today_date)
     response = agent.run(
         user_query=chatbot_in.user_query,
         previous_conversation=chatbot_in.previous_conversation,

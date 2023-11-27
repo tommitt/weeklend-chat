@@ -12,7 +12,7 @@ from langchain.tools import StructuredTool
 from langchain.tools.render import format_tool_to_openai_tool
 from sqlalchemy.orm import Session
 
-from app.answerer.prompts import (
+from app.answerer.push.prompts import (
     AGENT_SYSTEM_PROMPT,
     RECOMMENDER_SYSTEM_PROMPT,
     SEARCH_TOOL_DESCRIPTION,
@@ -25,7 +25,7 @@ from app.utils.conn import get_llm, get_vectorstore, get_vectorstore_translator
 from app.utils.datetime_utils import date_to_timestamp
 
 
-class Answerer:
+class AiAgent:
     def __init__(self, db: Session, today_date: datetime.date | None = None) -> None:
         self.db = db
         self.today_date = (
@@ -184,7 +184,7 @@ class Answerer:
     def run(
         self, user_query: str, previous_conversation: list[tuple[str, str]] = []
     ) -> AnswerOutput:
-        """Run answerer on user query - it routes the LLM and tool calls."""
+        """Run AI agent on user query - it routes the LLM and tool calls."""
         agent = self.get_agent(previous_conversation)
         agent_output = agent.invoke({"user_query": user_query})
         if isinstance(agent_output, AgentFinish):

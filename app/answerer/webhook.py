@@ -5,8 +5,8 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.requests import Request
 from sqlalchemy.orm import Session
 
-from app.answerer.answerer import Answerer
-from app.answerer.messages import (
+from app.answerer.push.agent import AiAgent
+from app.answerer.push.messages import (
     MESSAGE_GOT_UNBLOCKED,
     MESSAGE_NOT_DELIVERED,
     MESSAGE_REACHED_MAX_USERS,
@@ -191,7 +191,7 @@ def standard_user_journey(
     output = check_user_limits(db=db, db_user=db_user) if not db_user.is_admin else None
 
     if output is None:
-        agent = Answerer(db=db)
+        agent = AiAgent(db=db)
         output = agent.run(
             user_query,
             previous_conversation=get_previous_conversation(db=db, user_id=db_user.id),
