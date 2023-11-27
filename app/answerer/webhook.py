@@ -15,7 +15,6 @@ from app.answerer.messages import (
     MESSAGE_WELCOME,
 )
 from app.answerer.schemas import AnswerOutput, WebhookPayload
-from app.answerer.whatsapp_client import WhatsappWrapper
 from app.constants import (
     CONVERSATION_HOURS_WINDOW,
     CONVERSATION_MAX_MESSAGES,
@@ -24,6 +23,7 @@ from app.constants import (
     LIMIT_MAX_USERS,
     THRESHOLD_NOT_DELIVERED_ANSWER,
     WHATSAPP_HOOK_TOKEN,
+    WHATSAPP_NUMBER_ID,
 )
 from app.db.db import get_db
 from app.db.enums import AnswerType
@@ -42,23 +42,22 @@ from app.db.services import (
     unblock_user,
     update_temp_conversation,
 )
+from app.utils.whatsapp_client import WhatsappWrapper
 
 webhook = APIRouter()
 
 
 @webhook.post("/send_template_message")
 async def send_template_message(to_phone_number: str):
-    whatsapp_client = WhatsappWrapper()
-    response = whatsapp_client.send_template_message(
-        to_phone_number, "hello_world", "en_US"
-    )
+    wa_client = WhatsappWrapper(number_id=WHATSAPP_NUMBER_ID)
+    response = wa_client.send_template_message(to_phone_number, "hello_world", "en_US")
     return {"status_code": response.status_code, "content": response.text}
 
 
 @webhook.post("/send_text_message")
 async def send_text_message(to_phone_number: str, message: str):
-    whatsapp_client = WhatsappWrapper()
-    response = whatsapp_client.send_message(to_phone_number, message)
+    wa_client = WhatsappWrapper(number_id=WHATSAPP_NUMBER_ID)
+    response = wa_client.send_message(to_phone_number, message)
     return {"status_code": response.status_code, "content": response.text}
 
 
@@ -263,7 +262,7 @@ async def handle_post_request(
                 )
 
         if output.answer is not None:
-            wa_client = WhatsappWrapper()
+            wa_client = WhatsappWrapper(number_id=WHATSAPP_NUMBER_ID)
             wa_response = wa_client.send_message(
                 to_phone_number=phone_number,
                 message=output.answer,
