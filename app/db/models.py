@@ -18,10 +18,29 @@ class UserORM(Base):
     is_admin: Mapped[bool]
     registered_at: Mapped[datetime.datetime]
 
+    # relationships
     conversations: Mapped[list["ConversationORM"]] = relationship(back_populates="user")
 
     def __repr__(self) -> str:
         return f"UserORM(id={self.id!r}, phone_number={self.phone_number!r})"
+
+
+# TODO: create migration
+class BusinessORM(Base):
+    __tablename__ = "businesses"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    phone_number: Mapped[str]
+    registered_at: Mapped[datetime.datetime]
+
+    # relationships
+    conversations: Mapped[list["BusinessConversationORM"]] = relationship(
+        back_populates="business"
+    )
+    events: Mapped[list["EventORM"]] = relationship(back_populates="business")
+
+    def __repr__(self) -> str:
+        return f"BusinessORM(id={self.id!r}, phone_number={self.phone_number!r})"
 
 
 class ConversationORM(Base):
@@ -37,10 +56,31 @@ class ConversationORM(Base):
     received_at: Mapped[datetime.datetime]
     registered_at: Mapped[datetime.datetime]
 
+    # relationships
     user: Mapped["UserORM"] = relationship(back_populates="conversations")
 
     def __repr__(self) -> str:
-        return f"ConversationORM(id={self.id!r}, from_id={self.user_id}, at={self.registered_at})"
+        return f"ConversationORM(id={self.id!r}, from_id={self.user_id!r}, at={self.registered_at!r})"
+
+
+class BusinessConversationORM(Base):
+    __tablename__ = "business_conversations"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    business_id: Mapped[int] = mapped_column(ForeignKey("businesses.id"))
+    wa_id: Mapped[str] = mapped_column(index=True)  # format: "wamid.ID"
+    from_message: Mapped[str]
+    to_message: Mapped[Optional[str]]
+    answer_type: Mapped[AnswerType]
+    registered_event_id: Mapped[Optional[int]] = mapped_column(ForeignKey("events.id"))
+    received_at: Mapped[datetime.datetime]
+    registered_at: Mapped[datetime.datetime]
+
+    # relationships
+    business: Mapped["BusinessORM"] = relationship(back_populates="conversations")
+
+    def __repr__(self) -> str:
+        return f"BusinessConversationORM(id={self.id!r}, from_id={self.business_id!r}, at={self.registered_at!r})"
 
 
 class EventORM(Base):
@@ -50,6 +90,7 @@ class EventORM(Base):
     description: Mapped[str]
     is_vectorized: Mapped[bool]
     source: Mapped[str]
+    business_id: Mapped[Optional[int]] = mapped_column(ForeignKey("businesses.id"))
     registered_at: Mapped[datetime.datetime]
 
     # metadata
@@ -75,6 +116,9 @@ class EventORM(Base):
     location: Mapped[Optional[str]]
     url: Mapped[Optional[str]]
     price_level: Mapped[Optional[PriceLevel]]
+
+    # relationships
+    business: Mapped["BusinessORM"] = relationship(back_populates="events")
 
     def __repr__(self) -> str:
         return f"EventORM(id={self.id!r})"
