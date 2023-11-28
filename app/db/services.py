@@ -14,8 +14,15 @@ from app.constants import (
     PINECONE_NAMESPACE,
 )
 from app.db.enums import AnswerType
-from app.db.models import ConversationORM, EventORM, UserORM
-from app.db.schemas import Conversation, ConversationTemp, ConversationUpd, Event, User
+from app.db.models import BusinessORM, ConversationORM, EventORM, UserORM
+from app.db.schemas import (
+    Business,
+    Conversation,
+    ConversationTemp,
+    ConversationUpd,
+    Event,
+    User,
+)
 
 
 # User
@@ -97,6 +104,28 @@ def register_user(db: Session, user_in: User) -> UserORM:
     db.commit()
     db.refresh(db_user)
     return db_user
+
+
+# Business
+def get_business(db: Session, phone_number: str) -> BusinessORM | None:
+    return (
+        db.query(BusinessORM).filter(BusinessORM.phone_number == phone_number).first()
+    )
+
+
+def register_business(db: Session, business_in: Business) -> BusinessORM:
+    db_business = get_business(db, phone_number=business_in.phone_number)
+    if db_business:
+        raise HTTPException(status_code=400, detail="Phone number already registered")
+
+    business_dict = business_in.dict()
+    business_dict["registered_at"] = datetime.datetime.utcnow()
+
+    db_business = BusinessORM(**business_dict)
+    db.add(db_business)
+    db.commit()
+    db.refresh(db_business)
+    return db_business
 
 
 # Conversation
