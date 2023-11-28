@@ -22,6 +22,18 @@ class UserInDB(User):
         orm_mode = True
 
 
+class Business(BaseModel):
+    phone_number: str
+
+
+class BusinessInDB(User):
+    id: int
+    registered_at: datetime.datetime
+
+    class Config:
+        orm_mode = True
+
+
 class ConversationTemp(BaseModel):
     from_message: str
     wa_id: str
@@ -47,9 +59,29 @@ class ConversationInDb(Conversation):
         orm_mode = True
 
 
+class BusinessConversationUpd(BaseModel):
+    business_id: int
+    to_message: str | None
+    answer_type: AnswerType
+    registered_event_id: int | None
+
+
+class BusinessConversation(ConversationTemp, BusinessConversationUpd):
+    pass
+
+
+class BusinessConversationInDb(BusinessConversation):
+    id: int
+    registered_at: datetime.datetime
+
+    class Config:
+        orm_mode = True
+
+
 class Event(BaseModel):
     description: str
     is_vectorized: bool
+    business_id: int | None = None
 
     # metadata
     city: CityEnum
