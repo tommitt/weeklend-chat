@@ -5,9 +5,9 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.requests import Request
 from sqlalchemy.orm import Session
 
-from app.answerer.push.journey import user_journey
+from app.answerer.chats import Chat, ChatType
 from app.answerer.schemas import WebhookPayload
-from app.constants import WHATSAPP_HOOK_TOKEN, WHATSAPP_NUMBER_ID
+from app.constants import WHATSAPP_HOOK_TOKEN
 from app.db.db import get_db
 from app.db.schemas import ConversationTemp, ConversationUpd
 from app.db.services import (
@@ -18,25 +18,30 @@ from app.db.services import (
 )
 from app.utils.whatsapp_client import WhatsappWrapper
 
-webhook = APIRouter()
+webhook = APIRouter(prefix="/{chat_type}")
+
+
+@webhook.get("/")
+def chat_endpoint_test(chat_type: ChatType):
+    return {"message": f"Hello world! Weeklend is here at {chat_type} chat endpoint."}
 
 
 @webhook.post("/send_template_message")
-async def send_template_message(to_phone_number: str):
-    wa_client = WhatsappWrapper(number_id=WHATSAPP_NUMBER_ID)
+async def send_template_message(chat_type: ChatType, to_phone_number: str):
+    wa_client = WhatsappWrapper(number_id=Chat(chat_type).whatsapp_number_id)
     response = wa_client.send_template_message(to_phone_number, "hello_world", "en_US")
     return {"status_code": response.status_code, "content": response.text}
 
 
 @webhook.post("/send_text_message")
-async def send_text_message(to_phone_number: str, message: str):
-    wa_client = WhatsappWrapper(number_id=WHATSAPP_NUMBER_ID)
+async def send_text_message(chat_type: ChatType, to_phone_number: str, message: str):
+    wa_client = WhatsappWrapper(number_id=Chat(chat_type).whatsapp_number_id)
     response = wa_client.send_message(to_phone_number, message)
     return {"status_code": response.status_code, "content": response.text}
 
 
-@webhook.get("/webhooks")
-async def handle_get_request(request: Request):
+@webhook.get("/webhook")
+async def webhook_get_request(chat_type: ChatType, request: Request):
     hub_mode = request.query_params.get("hub.mode")
     hub_challenge = request.query_params.get("hub.challenge")
     hub_verify_token = request.query_params.get("hub.verify_token")
@@ -56,11 +61,13 @@ async def handle_get_request(request: Request):
     )
 
 
-@webhook.post("/webhooks")
-async def handle_post_request(
+@webhook.post("/webhook")
+async def webhook_post_request(
+    chat_type: ChatType,
     payload: WebhookPayload,
     db: Session = Depends(get_db),
 ):
+    chat = Chat(chat_type, db=db)
     try:
         payload_value = payload.entry[0]["changes"][0]["value"]
         if "messages" not in payload_value:
@@ -97,15 +104,14 @@ async def handle_post_request(
             ),
         )
 
-        output, user_id = user_journey(
-            db=db,
+        output = chat.user_journey.run(
             phone_number=phone_number,
             user_query=message_body,
             message_timestamp=message_timestamp,
         )
 
         if output.answer is not None:
-            wa_client = WhatsappWrapper(number_id=WHATSAPP_NUMBER_ID)
+            wa_client = WhatsappWrapper(number_id=chat.whatsapp_number_id)
             wa_response = wa_client.send_message(
                 to_phone_number=phone_number,
                 message=output.answer,
@@ -120,7 +126,7 @@ async def handle_post_request(
             db=db,
             db_conversation=db_conversation,
             conversation_update_in=ConversationUpd(
-                user_id=user_id,
+                user_id=output.user_id,
                 to_message=output.answer,
                 answer_type=output.type,
                 used_event_ids=json.dumps(output.used_event_ids),

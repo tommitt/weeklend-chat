@@ -41,6 +41,9 @@ postgresql\
 /{os.environ.get("POSTGRES_DATABASE")}\
 """
 
+# TODO: check API token is same for push/pull
 WHATSAPP_API_TOKEN = os.environ.get("WHATSAPP_API_TOKEN")
-WHATSAPP_NUMBER_ID = os.environ.get("WHATSAPP_NUMBER_ID")
+WHATSAPP_PUSH_NUMBER_ID = os.environ.get("WHATSAPP_NUMBER_ID")
+# TODO: add pull whatsapp number id in .env file
+WHATSAPP_PULL_NUMBER_ID = ""
 WHATSAPP_HOOK_TOKEN = os.environ.get("WHATSAPP_HOOK_TOKEN")

@@ -1,5 +1,6 @@
 import datetime
 import logging
+from typing import Optional
 
 from langchain.agents.output_parsers.openai_tools import OpenAIToolsAgentOutputParser
 from langchain.chains.query_constructor.ir import Comparison, Operation, StructuredQuery
@@ -10,6 +11,7 @@ from langchain.schema.output_parser import StrOutputParser
 from langchain.schema.runnable import RunnableSerializable
 from langchain.tools import StructuredTool
 from langchain.tools.render import format_tool_to_openai_tool
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.answerer.push.prompts import (
@@ -17,12 +19,25 @@ from app.answerer.push.prompts import (
     RECOMMENDER_SYSTEM_PROMPT,
     SEARCH_TOOL_DESCRIPTION,
 )
-from app.answerer.schemas import AnswerOutput, SearchEventsToolInput
+from app.answerer.schemas import AnswerOutput
 from app.constants import N_EVENTS_CONTEXT, N_EVENTS_MAX
 from app.db.enums import AnswerType
 from app.db.services import get_event_by_id
 from app.utils.conn import get_llm, get_vectorstore, get_vectorstore_translator
 from app.utils.datetime_utils import date_to_timestamp
+
+
+class SearchEventsToolInput(BaseModel):
+    user_query: str = Field(description="The user's query")
+    start_date: Optional[str] = Field(
+        description="The start date of the range in format 'YYYY-MM-DD'"
+    )
+    end_date: Optional[str] = Field(
+        description="The end date of the range in format 'YYYY-MM-DD'"
+    )
+    time: Optional[str] = Field(
+        description="This is the time of the day. It can be either 'daytime', 'nighttime' or 'both'"
+    )
 
 
 class AiAgent:
