@@ -1,6 +1,7 @@
 import requests
 import streamlit as st
 
+from app.answerer.chats import ChatType
 from app.answerer.schemas import AnswerOutput
 from app.utils.conversation_utils import streamlit_to_langchain_conversation
 from interface.backend import FASTAPI_URL
@@ -15,6 +16,7 @@ def ui() -> None:
         st.session_state["messages"] = []
 
     ref_date = st.date_input("Data di riferimento")
+    chat_type = st.selectbox("Tipo di chat", options=[e.value for e in ChatType])
 
     for message in st.session_state["messages"]:
         with st.chat_message(message["role"]):
@@ -27,7 +29,7 @@ def ui() -> None:
 
         with st.spinner("Sto pensando..."):
             response = requests.post(
-                f"{FASTAPI_URL}/chatbot",
+                f"{FASTAPI_URL}/chatbot/{chat_type}",
                 data=ChatbotInput(
                     user_query=user_query,
                     today_date=ref_date,

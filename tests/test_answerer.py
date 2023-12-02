@@ -3,7 +3,7 @@ import datetime
 import pytest
 from sqlalchemy.orm import Session
 
-from app.answerer.push.agent import AiAgent
+from app.answerer.push import AiAgent
 from app.db.enums import AnswerType
 
 

@@ -4,7 +4,9 @@ import logging
 from fastapi import Depends, FastAPI, status
 from sqlalchemy.orm import Session
 
-from app.answerer.push.agent import AiAgent
+from app.answerer.chats import ChatType
+from app.answerer.pull import AiAgent as PullAiAgent
+from app.answerer.push import AiAgent as PushAiAgent
 from app.answerer.schemas import AnswerOutput
 from app.db.db import get_db
 from app.loader.gform import GFormLoader
@@ -19,12 +21,19 @@ logging.basicConfig(level=logging.INFO)
 app = FastAPI()
 
 
-@app.post("/chatbot", response_model=AnswerOutput)
+@app.post("/chatbot/{chat_type}", response_model=AnswerOutput)
 async def chatbot_api(
+    chat_type: ChatType,
     chatbot_in: ChatbotInput,
     db: Session = Depends(get_db),
 ):
-    agent = AiAgent(db=db, today_date=chatbot_in.today_date)
+    if chat_type == ChatType.push:
+        agent = PushAiAgent(db=db, today_date=chatbot_in.today_date)
+    elif chat_type == ChatType.pull:
+        agent = PullAiAgent(db=db)
+    else:
+        raise Exception(f"Chat of type {chat_type} is not accepted.")
+
     response = agent.run(
         user_query=chatbot_in.user_query,
         previous_conversation=chatbot_in.previous_conversation,
