@@ -89,7 +89,9 @@ async def webhook_post_request(
         message_body = message["text"]["body"]
         message_timestamp = int(message["timestamp"])
 
-        db_conversation = get_conversation_by_waid(db=db, wa_id=wa_id)
+        db_conversation = get_conversation_by_waid(
+            db=db, wa_id=wa_id, orm=chat.conversation_orm
+        )
         if db_conversation is not None:
             return Response(
                 content="Not answering - message already processed.",
@@ -102,8 +104,14 @@ async def webhook_post_request(
                 wa_id=wa_id,
                 received_at=datetime.datetime.utcfromtimestamp(message_timestamp),
             ),
+            user_orm=chat.user_orm,
+            conversation_orm=chat.conversation_orm,
         )
 
+        if chat.user_journey is None:
+            raise Exception(
+                f"User journey for {chat_type} chat is not defined: {chat}."
+            )
         output = chat.user_journey.run(
             phone_number=phone_number,
             user_query=message_body,

@@ -59,25 +59,6 @@ class ConversationInDb(Conversation):
         orm_mode = True
 
 
-class BusinessConversationUpd(BaseModel):
-    business_id: int
-    to_message: str | None
-    answer_type: AnswerType
-    registered_event_id: int | None
-
-
-class BusinessConversation(ConversationTemp, BusinessConversationUpd):
-    pass
-
-
-class BusinessConversationInDb(BusinessConversation):
-    id: int
-    registered_at: datetime.datetime
-
-    class Config:
-        orm_mode = True
-
-
 class Event(BaseModel):
     description: str
     is_vectorized: bool
