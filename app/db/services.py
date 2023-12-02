@@ -148,23 +148,20 @@ def get_user_conversations(
     db: Session,
     user_id: int,
     from_datetime: datetime.datetime | None,
+    orm: type[ConversationORM] | type[BusinessConversationORM],
     max_messages: int = 100,
-) -> list[ConversationORM]:
+) -> list[ConversationORM | BusinessConversationORM]:
     """
     Get last conversations of a user from a certain datetime.
     Conversations are returned ordered from the oldest to the newest.
     """
     return (
-        db.query(ConversationORM)
+        db.query(orm)
         .filter(
-            ConversationORM.user_id == user_id,
-            (
-                ConversationORM.registered_at >= from_datetime
-                if from_datetime is not None
-                else True
-            ),
+            orm.user_id == user_id,
+            (orm.registered_at >= from_datetime if from_datetime is not None else True),
         )
-        .order_by(desc(ConversationORM.id))
+        .order_by(desc(orm.id))
         .limit(max_messages)
         .all()
     )[::-1]

@@ -8,6 +8,13 @@ class WebhookPayload(BaseModel):
     object: str
 
 
+class MessageInput(BaseModel):
+    wa_id: str
+    phone_number: str
+    body: str
+    timestamp: int
+
+
 class AnswerOutput(BaseModel):
     answer: str | None
     type: AnswerType

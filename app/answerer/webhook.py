@@ -6,7 +6,7 @@ from fastapi.requests import Request
 from sqlalchemy.orm import Session
 
 from app.answerer.chats import Chat, ChatType
-from app.answerer.schemas import WebhookPayload
+from app.answerer.schemas import MessageInput, WebhookPayload
 from app.constants import WHATSAPP_HOOK_TOKEN
 from app.db.db import get_db
 from app.db.schemas import ConversationTemp, ConversationUpd
@@ -76,21 +76,22 @@ async def webhook_post_request(
                 status_code=status.HTTP_200_OK,
             )
 
-        message = payload_value["messages"][0]
-        if "type" not in message or message["type"] != "text":
+        input_message = payload_value["messages"][0]
+        if "type" not in input_message or input_message["type"] != "text":
             return Response(
                 content="Not answering - message type is not text.",
                 status_code=status.HTTP_200_OK,
             )
 
-        # read message
-        phone_number = message["from"]
-        wa_id = message["id"]
-        message_body = message["text"]["body"]
-        message_timestamp = int(message["timestamp"])
+        message = MessageInput(
+            phone_number=input_message["from"],
+            wa_id=input_message["id"],
+            body=input_message["text"]["body"],
+            timestamp=int(input_message["timestamp"]),
+        )
 
         db_conversation = get_conversation_by_waid(
-            db=db, wa_id=wa_id, orm=chat.conversation_orm
+            db=db, wa_id=message.wa_id, orm=chat.conversation_orm
         )
         if db_conversation is not None:
             return Response(
@@ -100,9 +101,9 @@ async def webhook_post_request(
         db_conversation = register_temp_conversation(
             db=db,
             conversation_temp_in=ConversationTemp(
-                from_message=message_body,
-                wa_id=wa_id,
-                received_at=datetime.datetime.utcfromtimestamp(message_timestamp),
+                from_message=message.body,
+                wa_id=message.wa_id,
+                received_at=datetime.datetime.utcfromtimestamp(message.timestamp),
             ),
             user_orm=chat.user_orm,
             conversation_orm=chat.conversation_orm,
@@ -112,16 +113,12 @@ async def webhook_post_request(
             raise Exception(
                 f"User journey for {chat_type} chat is not defined: {chat}."
             )
-        output = chat.user_journey.run(
-            phone_number=phone_number,
-            user_query=message_body,
-            message_timestamp=message_timestamp,
-        )
+        output = chat.user_journey.run(message)
 
         if output.answer is not None:
             wa_client = WhatsappWrapper(number_id=chat.whatsapp_number_id)
             wa_response = wa_client.send_message(
-                to_phone_number=phone_number,
+                to_phone_number=message.phone_number,
                 message=output.answer,
             )
             if wa_response.status_code != status.HTTP_200_OK:

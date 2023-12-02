@@ -2,15 +2,9 @@ import requests
 import streamlit as st
 
 from app.answerer.schemas import AnswerOutput
+from app.utils.conversation_utils import streamlit_to_langchain_conversation
 from interface.backend import FASTAPI_URL
 from interface.utils.schemas import ChatbotInput
-
-
-def streamlit_to_langchain_conversation(messages: list[dict]) -> list[tuple]:
-    conversation = []
-    for message in messages:
-        conversation.append((message["role"], message["content"]))
-    return conversation
 
 
 def ui() -> None:

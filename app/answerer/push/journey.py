@@ -11,7 +11,7 @@ from app.answerer.push.messages import (
     MESSAGE_WEEK_BLOCKS_LIMIT,
     MESSAGE_WELCOME,
 )
-from app.answerer.schemas import AnswerOutput
+from app.answerer.schemas import AnswerOutput, MessageInput
 from app.constants import (
     CONVERSATION_HOURS_WINDOW,
     CONVERSATION_MAX_MESSAGES,
@@ -21,7 +21,7 @@ from app.constants import (
     THRESHOLD_NOT_DELIVERED_ANSWER,
 )
 from app.db.enums import AnswerType
-from app.db.models import UserORM
+from app.db.models import ConversationORM, UserORM
 from app.db.schemas import User
 from app.db.services import (
     block_user,
@@ -32,6 +32,7 @@ from app.db.services import (
     register_user,
     unblock_user,
 )
+from app.utils.conversation_utils import db_to_langchain_conversation
 
 
 class UserJourney:
@@ -127,14 +128,10 @@ class UserJourney:
                 datetime.datetime.now()
                 - datetime.timedelta(hours=CONVERSATION_HOURS_WINDOW)
             ),
+            orm=ConversationORM,
             max_messages=CONVERSATION_MAX_MESSAGES,
         )
-        llm_conversations = []
-        for db_conversation in db_conversations:
-            llm_conversations.append(("human", db_conversation.from_message))
-            if db_conversation.answer_type != AnswerType.unanswered:
-                llm_conversations.append(("ai", db_conversation.to_message))
-        return llm_conversations
+        return db_to_langchain_conversation(db_conversations)
 
     def _standard_user_journey(self, db_user: UserORM, user_query: str) -> AnswerOutput:
         output = (
@@ -145,34 +142,27 @@ class UserJourney:
             agent = AiAgent(db=self.db)
             output = agent.run(
                 user_query,
-                previous_conversation=self._get_previous_conversation(
-                    user_id=db_user.id
-                ),
+                previous_conversation=self._get_previous_conversation(db_user.id),
             )
 
         return output
 
-    def run(
-        self,
-        phone_number: str,
-        user_query: str,
-        message_timestamp: int,
-    ) -> AnswerOutput:
+    def run(self, message: MessageInput) -> AnswerOutput:
         current_timestamp = int(datetime.datetime.utcnow().timestamp())
 
-        db_user = get_user(self.db, phone_number=phone_number)
+        db_user = get_user(self.db, phone_number=message.phone_number)
         if db_user is None:
-            output, db_user = self._new_user_journey(phone_number=phone_number)
+            output, db_user = self._new_user_journey(phone_number=message.phone_number)
         else:
             if db_user.is_blocked:
                 output = self._blocked_user_journey(db_user=db_user)
-            elif current_timestamp - message_timestamp > THRESHOLD_NOT_DELIVERED_ANSWER:
+            elif current_timestamp - message.timestamp > THRESHOLD_NOT_DELIVERED_ANSWER:
                 output = AnswerOutput(
                     answer=MESSAGE_NOT_DELIVERED, type=AnswerType.failed
                 )
             else:
                 output = self._standard_user_journey(
-                    db_user=db_user, user_query=user_query
+                    db_user=db_user, user_query=message.body
                 )
         output.user_id = db_user.id
         return output

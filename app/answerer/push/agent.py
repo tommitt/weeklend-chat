@@ -49,7 +49,7 @@ class AiAgent:
         self.llm = get_llm()
         self.vectorstore = get_vectorstore()
         self.vectorstore_translator = get_vectorstore_translator()
-        self.set_search_tool()
+        self.set_tools()
 
     def search_events(
         self,
@@ -153,8 +153,11 @@ class AiAgent:
             )
         return "\n----------\n".join(doc_texts)
 
-    def set_search_tool(self) -> None:
-        """Set search tool for searching events."""
+    def set_tools(self) -> None:
+        """
+        Set tools for the llm to use:
+        - search_tool: search available events.
+        """
         self.search_tool = StructuredTool(
             name="search_events",
             description=SEARCH_TOOL_DESCRIPTION.format(today_date=self.today_date),
