@@ -13,10 +13,14 @@ elaborare l'ultimo messaggio.\
 
 MESSAGE_REGISTERED_STATIC_BUSINESS = """\
 La registrazione dell'organizzazione "{name}" è stata completata con successo.
-Sarà adesso visibile da tutti gli utenti di Weeklend!
+Tutti gli utenti di Weeklend potranno trovarla da adesso!\
 """
 
 MESSAGE_REGISTERED_DYNAMIC_BUSINESS = """\
 La registrazione dell'organizzazione "{name}" è stata completata con successo.
-Vuoi procedere nel registare un evento?
+Vuoi procedere nel registare un evento?\
+"""
+
+MESSAGE_REGISTERED_EVENT = """\
+La registrazione dell'evento "{name}" è stata completata con successo.\
 """

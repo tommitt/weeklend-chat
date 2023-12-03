@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 
 from app.answerer.pull.messages import (
     MESSAGE_REGISTERED_DYNAMIC_BUSINESS,
+    MESSAGE_REGISTERED_EVENT,
     MESSAGE_REGISTERED_STATIC_BUSINESS,
 )
 from app.answerer.pull.prompts import BUSINESS_SYSTEM_PROMPT, EVENT_SYSTEM_PROMPT
@@ -26,6 +27,12 @@ class UpdateBusinessToolInput(BaseModel):
     description: str = Field(description="The description of the organization")
     type: BusinessType = Field(
         description="The type of experiences the organization provides"
+    )
+    url: Optional[str] = Field(
+        "Required only for static organizations: external URL linking to the organization's website"
+    )
+    closing_days: Optional[list[int]] = Field(
+        "Required only for static organizations: week days when they are closed."
     )
 
 
@@ -60,7 +67,10 @@ class AiAgent:
         name: str,
         description: str,
         type: BusinessType,
+        url: str | None = None,
+        closing_days: list[int] | None = None,
     ) -> str:
+        # TODO: add fallback if url or closing days are not provided?
         # TODO: register business information
         if type == BusinessType.static:
             return MESSAGE_REGISTERED_STATIC_BUSINESS.format(name=name)
@@ -79,11 +89,12 @@ class AiAgent:
         location: str | None = None,
     ) -> str:
         # TODO: register event
-        return "Correctly registered event."
+        return MESSAGE_REGISTERED_EVENT.format(name=name)
 
     def set_tools(self) -> None:
         """
         Set tools for the llm to use:
+        - update_business: update business information.
         - register_event: register event to database.
         """
         self.business_tool = StructuredTool(
@@ -103,18 +114,28 @@ class AiAgent:
         self, user_query: str, previous_conversation: list[tuple[str, str]] = []
     ) -> AnswerOutput:
         """Run AI agent on user query - it routes the LLM and tool calls."""
-        # TODO: route when business is already updated
+
+        if self.db_business.business_type is None:
+            system_prompt = ("system", BUSINESS_SYSTEM_PROMPT)
+            tool = self.business_tool
+        else:
+            system_prompt = (
+                "system",
+                EVENT_SYSTEM_PROMPT.format(
+                    today_date=self.today_date,
+                    business_description=self.db_business.description,
+                ),
+            )
+            tool = self.event_tool
+
         prompt = ChatPromptTemplate.from_messages(
-            [("system", BUSINESS_SYSTEM_PROMPT)]
-            + previous_conversation
-            + [("human", "{user_query}")]
+            [system_prompt] + previous_conversation + [("human", "{user_query}")]
         )
         agent = (
             prompt
-            | self.llm.bind(tools=[format_tool_to_openai_tool(self.business_tool)])
+            | self.llm.bind(tools=[format_tool_to_openai_tool(tool)])
             | OpenAIToolsAgentOutputParser()
         )
-
         agent_output = agent.invoke({"user_query": user_query})
 
         if isinstance(agent_output, AgentFinish):
@@ -123,7 +144,8 @@ class AiAgent:
                 type=AnswerType.conversational,
             )
 
-        tool_input = UpdateBusinessToolInput(**agent_output[0].tool_input)
-        logging.info(f"Calling {self.business_tool.name} tool with input: {tool_input}")
-        business_answer = self.business_tool.run(tool_input.dict())
-        return AnswerOutput(answer=business_answer, type=AnswerType.template)
+        tool_input = tool.args_schema(**agent_output[0].tool_input)
+        logging.info(f"Calling {tool.name} tool with input: {tool_input}")
+        tool_output = tool.run(tool_input.dict())
+        # TODO: add created event id to AnswerOutput
+        return AnswerOutput(answer=tool_output, type=AnswerType.template)
