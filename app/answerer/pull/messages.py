@@ -10,3 +10,13 @@ MESSAGE_NOT_DELIVERED = """\
 Perdonami, ma qualcosa è andato storto e non sono stato in grado di \
 elaborare l'ultimo messaggio.\
 """
+
+MESSAGE_REGISTERED_STATIC_BUSINESS = """\
+La registrazione dell'organizzazione "{name}" è stata completata con successo.
+Sarà adesso visibile da tutti gli utenti di Weeklend!
+"""
+
+MESSAGE_REGISTERED_DYNAMIC_BUSINESS = """\
+La registrazione dell'organizzazione "{name}" è stata completata con successo.
+Vuoi procedere nel registare un evento?
+"""

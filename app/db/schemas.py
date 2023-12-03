@@ -2,7 +2,7 @@ import datetime
 
 from pydantic import BaseModel
 
-from app.db.enums import AnswerType, CityEnum, PriceLevel
+from app.db.enums import AnswerType, BusinessType, CityEnum, PriceLevel
 from app.db.models import EventORM
 from app.utils.datetime_utils import date_to_timestamp
 
@@ -24,9 +24,12 @@ class UserInDB(User):
 
 class Business(BaseModel):
     phone_number: str
+    name: str | None = None
+    description: str | None = None
+    business_type: BusinessType | None = None
 
 
-class BusinessInDB(User):
+class BusinessInDB(Business):
     id: int
     registered_at: datetime.datetime
 

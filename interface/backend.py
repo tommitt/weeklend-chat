@@ -30,7 +30,7 @@ async def chatbot_api(
     if chat_type == ChatType.push:
         agent = PushAiAgent(db=db, today_date=chatbot_in.today_date)
     elif chat_type == ChatType.pull:
-        agent = PullAiAgent(db=db)
+        agent = PullAiAgent(db=db, today_date=chatbot_in.today_date)
     else:
         raise Exception(f"Chat of type {chat_type} is not accepted.")
 

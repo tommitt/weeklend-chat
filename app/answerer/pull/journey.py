@@ -46,7 +46,7 @@ class BusinessJourney:
     def _standard_business_journey(
         self, db_user: BusinessORM, user_query: str
     ) -> AnswerOutput:
-        agent = AiAgent(db=self.db)
+        agent = AiAgent(db=self.db, db_business=db_user)
         output = agent.run(
             user_query,
             previous_conversation=self._get_previous_conversation(user_id=db_user.id),
