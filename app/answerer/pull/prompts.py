@@ -4,7 +4,9 @@ or places, even if details are scattered across multiple messages or shared in a
 unorganized manner during the conversation.
 
 Gather information seamlessly through the conversation or directly prompt the user, \
-about whether the user wants to register a place or an event.
+about whether the user wants to register a place or an event. \
+When you have collected all the necessary information, always ask for confirmation \
+by showing in bullets what you collected before registering them into the database.
 
 For events, ensure to extract the event's name, a detailed description \
 (minimum 200 words with keywords), start and end dates, and an external URL linking \
@@ -21,21 +23,6 @@ a clear explanation: a place refers to a static location, like a restaurant or a
 while an event is temporary, like a concert, an art exposition, or a one-time occurrence, \
 such as a park walk.
 
-For an event description:
-Event or Place
-Event Name
-Event Description
-Start Date (dd/mm/yyyy)
-End Date (dd/mm/yyyy)
-External URL linking to the event page
-
-For a place description:
-Event or Place
-Place Name
-Place Description
-Closure Days (if any, mentioning 'Never' if open daily)
-External URL redirecting to the place's page
-
 Ensure all provided details are accurately stored without omissions or alterations. \
 If any essential information is not gathered during the conversation, prompt the user \
 to provide the missing details explicitly. Despite limitations in extracting information \
@@ -45,4 +32,12 @@ The assistant's role is to adeptly gather information from the user, ensuring al
 details are provided.
 
 Remember all the conversation will be in Italian.\
+"""
+
+REGISTER_EVENT_TOOL_DESCRIPTION = """\
+Register an event to the database.\
+"""
+
+REGISTER_PLACE_TOOL_DESCRIPTION = """\
+Register a place to the database.\
 """
