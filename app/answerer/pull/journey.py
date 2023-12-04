@@ -12,7 +12,7 @@ from app.constants import (
 )
 from app.db.enums import AnswerType
 from app.db.models import BusinessConversationORM, BusinessORM
-from app.db.schemas import Business
+from app.db.schemas import Business, BusinessInDB
 from app.db.services import get_business, get_user_conversations, register_business
 from app.utils.conversation_utils import db_to_langchain_conversation
 
@@ -46,7 +46,7 @@ class BusinessJourney:
     def _standard_business_journey(
         self, db_user: BusinessORM, user_query: str
     ) -> AnswerOutput:
-        agent = AiAgent(db=self.db, db_business=db_user)
+        agent = AiAgent(db=self.db, business=BusinessInDB.from_orm(db_user))
         output = agent.run(
             user_query,
             previous_conversation=self._get_previous_conversation(user_id=db_user.id),

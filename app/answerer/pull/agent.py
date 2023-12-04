@@ -18,7 +18,7 @@ from app.answerer.pull.messages import (
 from app.answerer.pull.prompts import BUSINESS_SYSTEM_PROMPT, EVENT_SYSTEM_PROMPT
 from app.answerer.schemas import AnswerOutput
 from app.db.enums import AnswerType, BusinessType
-from app.db.models import BusinessORM
+from app.db.schemas import BusinessInDB
 from app.utils.conn import get_llm
 
 
@@ -51,11 +51,11 @@ class AiAgent:
     def __init__(
         self,
         db: Session,
-        db_business: BusinessORM | None = None,
+        business: BusinessInDB,
         today_date: datetime.date | None = None,
     ) -> None:
         self.db = db
-        self.db_business = db_business
+        self.business = business
         self.today_date = (
             today_date if today_date is not None else datetime.date.today()
         )
@@ -115,7 +115,7 @@ class AiAgent:
     ) -> AnswerOutput:
         """Run AI agent on user query - it routes the LLM and tool calls."""
 
-        if self.db_business.business_type is None:
+        if self.business.business_type is None:
             system_prompt = ("system", BUSINESS_SYSTEM_PROMPT)
             tool = self.business_tool
         else:
@@ -123,7 +123,7 @@ class AiAgent:
                 "system",
                 EVENT_SYSTEM_PROMPT.format(
                     today_date=self.today_date,
-                    business_description=self.db_business.description,
+                    business_description=self.business.description,
                 ),
             )
             tool = self.event_tool
