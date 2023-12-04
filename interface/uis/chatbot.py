@@ -5,7 +5,6 @@ import streamlit as st
 
 from app.answerer.chats import ChatType
 from app.answerer.schemas import AnswerOutput
-from app.db.enums import BusinessType
 from app.db.schemas import BusinessInDB
 from app.utils.conversation_utils import streamlit_to_langchain_conversation
 from interface.backend import FASTAPI_URL
@@ -22,19 +21,15 @@ def ui() -> None:
     ref_date = st.date_input("Data di riferimento")
     chat_type = st.selectbox("Tipo di chat", options=[e.value for e in ChatType])
     if chat_type == ChatType.pull:
-        col1, col2, col3 = st.columns(3)
-        business_type = col1.selectbox(
-            "Tipo di Business", options=[None] + [e.value for e in BusinessType]
-        )
-        business_name = col2.text_input("Nome del Business")
-        business_description = col3.text_input("Descrizione del Business")
+        col1, col2 = st.columns(2)
+        business_name = col1.text_input("Nome del Business")
+        business_description = col2.text_input("Descrizione del Business")
         business = BusinessInDB(
             id=-9,
             phone_number="999999999999",
             registered_at=datetime.datetime.now(),
-            name=business_name,
-            description=business_description,
-            business_type=business_type,
+            name=None if business_name == "" else business_name,
+            description=None if business_description == "" else business_description,
         )
     else:
         business = None

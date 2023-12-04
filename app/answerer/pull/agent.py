@@ -11,9 +11,8 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.answerer.pull.messages import (
-    MESSAGE_REGISTERED_DYNAMIC_BUSINESS,
     MESSAGE_REGISTERED_EVENT,
-    MESSAGE_REGISTERED_STATIC_BUSINESS,
+    MESSAGE_UPDATED_BUSINESS,
 )
 from app.answerer.pull.prompts import (
     BUSINESS_INFO_PROMPT,
@@ -21,23 +20,14 @@ from app.answerer.pull.prompts import (
     EVENT_SYSTEM_PROMPT,
 )
 from app.answerer.schemas import AnswerOutput
-from app.db.enums import AnswerType, BusinessType
+from app.db.enums import AnswerType
 from app.db.schemas import BusinessInDB
 from app.utils.conn import get_llm
 
 
 class UpdateBusinessToolInput(BaseModel):
-    name: str = Field(description="The name of the organization")
-    description: str = Field(description="The description of the organization")
-    type: BusinessType = Field(
-        description="The type of experiences the organization provides"
-    )
-    url: Optional[str] = Field(
-        "Required only for static organizations: external URL linking to the organization's website"
-    )
-    closing_days: Optional[list[int]] = Field(
-        "Required only for static organizations: week days when they are closed."
-    )
+    name: str = Field(description="The name of the business")
+    description: str = Field(description="The description of the business")
 
 
 class RegisterEventToolInput(BaseModel):
@@ -70,18 +60,9 @@ class AiAgent:
         self,
         name: str,
         description: str,
-        type: BusinessType,
-        url: str | None = None,
-        closing_days: list[int] | None = None,
     ) -> str:
-        # TODO: add fallback if url or closing days are not provided?
         # TODO: register business information
-        if type == BusinessType.static:
-            return MESSAGE_REGISTERED_STATIC_BUSINESS.format(name=name)
-        elif type == BusinessType.dynamic:
-            return MESSAGE_REGISTERED_DYNAMIC_BUSINESS.format(name=name)
-        else:
-            raise Exception(f"Business of type {type} not accepted.")
+        return MESSAGE_UPDATED_BUSINESS.format(name=name, description=description)
 
     def register_event(
         self,
@@ -93,7 +74,14 @@ class AiAgent:
         location: str | None = None,
     ) -> str:
         # TODO: register event
-        return MESSAGE_REGISTERED_EVENT.format(name=name)
+        return MESSAGE_REGISTERED_EVENT.format(
+            name=name,
+            description=description,
+            url=url,
+            start_date=start_date,
+            end_date=end_date,
+            location=location,
+        )
 
     def set_tools(self) -> None:
         """
@@ -103,7 +91,7 @@ class AiAgent:
         """
         self.business_tool = StructuredTool(
             name="update_business",
-            description="Register information of an organization.",
+            description="Register information of a business.",
             args_schema=UpdateBusinessToolInput,
             func=self.update_business,
         )
@@ -119,7 +107,7 @@ class AiAgent:
     ) -> AnswerOutput:
         """Run AI agent on user query - it routes the LLM and tool calls."""
 
-        if self.business.business_type is None:
+        if self.business.name is None:
             system_prompt = [("system", BUSINESS_SYSTEM_PROMPT)]
             tool = self.business_tool
         else:

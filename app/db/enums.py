@@ -22,8 +22,3 @@ class PriceLevel(str, Enum):
     moderate = "€€"
     expensive = "€€€"
     very_expensive = "€€€€"
-
-
-class BusinessType(str, Enum):
-    static = "static"
-    dynamic = "dynamic"

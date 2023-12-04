@@ -5,7 +5,7 @@ from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.db import Base
-from app.db.enums import AnswerType, BusinessType, CityEnum, PriceLevel
+from app.db.enums import AnswerType, CityEnum, PriceLevel
 
 
 class UserORM(Base):
@@ -33,7 +33,6 @@ class BusinessORM(Base):
     phone_number: Mapped[str]
     name: Mapped[Optional[str]]
     description: Mapped[Optional[str]]
-    business_type: Mapped[Optional[BusinessType]]
     registered_at: Mapped[datetime.datetime]
 
     # relationships
