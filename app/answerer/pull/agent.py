@@ -15,7 +15,11 @@ from app.answerer.pull.messages import (
     MESSAGE_REGISTERED_EVENT,
     MESSAGE_REGISTERED_STATIC_BUSINESS,
 )
-from app.answerer.pull.prompts import BUSINESS_SYSTEM_PROMPT, EVENT_SYSTEM_PROMPT
+from app.answerer.pull.prompts import (
+    BUSINESS_INFO_PROMPT,
+    BUSINESS_SYSTEM_PROMPT,
+    EVENT_SYSTEM_PROMPT,
+)
 from app.answerer.schemas import AnswerOutput
 from app.db.enums import AnswerType, BusinessType
 from app.db.schemas import BusinessInDB
@@ -116,20 +120,25 @@ class AiAgent:
         """Run AI agent on user query - it routes the LLM and tool calls."""
 
         if self.business.business_type is None:
-            system_prompt = ("system", BUSINESS_SYSTEM_PROMPT)
+            system_prompt = [("system", BUSINESS_SYSTEM_PROMPT)]
             tool = self.business_tool
         else:
-            system_prompt = (
-                "system",
-                EVENT_SYSTEM_PROMPT.format(
-                    today_date=self.today_date,
-                    business_description=self.business.description,
+            system_prompt = [
+                (
+                    "system",
+                    EVENT_SYSTEM_PROMPT.format(today_date=self.today_date),
                 ),
-            )
+                (
+                    "human",
+                    BUSINESS_INFO_PROMPT.format(
+                        name=self.business.name, description=self.business.description
+                    ),
+                ),
+            ]
             tool = self.event_tool
 
         prompt = ChatPromptTemplate.from_messages(
-            [system_prompt] + previous_conversation + [("human", "{user_query}")]
+            system_prompt + previous_conversation + [("human", "{user_query}")]
         )
         agent = (
             prompt

@@ -25,10 +25,9 @@ EVENT_SYSTEM_PROMPT = (
     GENERAL_SYSTEM_PROMPT
     + """
 Your task is to collect experiences' information from the organization your talking to \
-and register them into our database.
-
-You are provided with the organization's description that you may use to enrich \
-the provided description.
+and register them into our database. \
+You are provided with the organization's information that you may use to enrich the \
+provided experiences' descriptions.
 
 Details might be scattered across multiple messages or \
 shared in an unorganized manner during the conversation. \
@@ -39,8 +38,11 @@ Do not proceed to the registration if any required information has not been give
 
 Always ask for a confirmation before registering the event.
 
-Consider that today is {today_date}.
---------------------
-{business_description}\
+Consider that today is {today_date}.\
 """
 )
+
+BUSINESS_INFO_PROMPT = """\
+Organization name: {name}
+Organization description: {description}
+"""
