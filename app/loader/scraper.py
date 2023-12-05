@@ -151,20 +151,12 @@ class GuidatorinoScraper(BaseScraper):
                     city=event_dict["city"],
                     start_date=event_dict["start_date"],
                     end_date=event_dict["end_date"],
-                    is_closed_mon=False,
-                    is_closed_tue=False,
-                    is_closed_wed=False,
-                    is_closed_thu=False,
-                    is_closed_fri=False,
-                    is_closed_sat=False,
-                    is_closed_sun=False,
                     is_during_day=event_dict["is_during_day"],
                     is_during_night=event_dict["is_during_night"],
                     # additional info
                     name=event_dict["title"],
                     location=event_dict["location"],
                     url=event_dict["url"],
-                    price_level=None,
                 )
             )
             self.events_list.remove(event_dict)
@@ -268,20 +260,12 @@ class LovelangheScraper(BaseScraper):
                         city=CityEnum.Torino,
                         start_date=start_date,
                         end_date=end_date,
-                        is_closed_mon=False,
-                        is_closed_tue=False,
-                        is_closed_wed=False,
-                        is_closed_thu=False,
-                        is_closed_fri=False,
-                        is_closed_sat=False,
-                        is_closed_sun=False,
                         is_during_day=is_during_day,
                         is_during_night=is_during_night,
                         # additional info
                         name=title,
                         location=location,
                         url=url,
-                        price_level=None,
                     )
                 )
 

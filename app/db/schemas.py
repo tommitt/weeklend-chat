@@ -70,13 +70,13 @@ class Event(BaseModel):
     city: CityEnum
     start_date: datetime.date
     end_date: datetime.date
-    is_closed_mon: bool
-    is_closed_tue: bool
-    is_closed_wed: bool
-    is_closed_thu: bool
-    is_closed_fri: bool
-    is_closed_sat: bool
-    is_closed_sun: bool
+    is_closed_mon: bool = False
+    is_closed_tue: bool = False
+    is_closed_wed: bool = False
+    is_closed_thu: bool = False
+    is_closed_fri: bool = False
+    is_closed_sat: bool = False
+    is_closed_sun: bool = False
     is_during_day: bool
     is_during_night: bool
 
@@ -84,7 +84,7 @@ class Event(BaseModel):
     name: str | None
     location: str | None
     url: str | None
-    price_level: PriceLevel | None
+    price_level: PriceLevel | None = None
 
 
 class EventInDb(Event):

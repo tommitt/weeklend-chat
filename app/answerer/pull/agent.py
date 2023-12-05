@@ -94,19 +94,11 @@ class AiAgent:
                 city=CityEnum.Torino,
                 start_date=start_date,
                 end_date=end_date if end_date is not None else start_date,
-                is_closed_mon=False,
-                is_closed_tue=False,
-                is_closed_wed=False,
-                is_closed_thu=False,
-                is_closed_fri=False,
-                is_closed_sat=False,
-                is_closed_sun=False,
                 is_during_day=True,  # TODO: get this info?
                 is_during_night=True,  # TODO: get this info?
                 name=name,
                 location=location,
                 url=url,
-                price_level=None,
             )
             db_event = register_event(
                 db=self.db, event_in=event, source=PULL_CHAT_SOURCE
