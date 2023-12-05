@@ -103,10 +103,6 @@ class AiAgent:
                 is_closed_sun=False,
                 is_during_day=True,  # TODO: get this info?
                 is_during_night=True,  # TODO: get this info?
-                is_countryside=False,  # TODO: remove this?
-                is_for_children=False,  # TODO: remove this?
-                is_for_disabled=False,  # TODO: remove this?
-                is_for_animals=False,  # TODO: remove this?
                 name=name,
                 location=location,
                 url=url,

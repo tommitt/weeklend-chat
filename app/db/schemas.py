@@ -79,10 +79,6 @@ class Event(BaseModel):
     is_closed_sun: bool
     is_during_day: bool
     is_during_night: bool
-    is_countryside: bool
-    is_for_children: bool
-    is_for_disabled: bool
-    is_for_animals: bool
 
     # additional info
     name: str | None
@@ -117,10 +113,6 @@ class EventInVectorstore(BaseModel):
     is_closed_sun: bool
     is_during_day: bool
     is_during_night: bool
-    is_countryside: bool
-    is_for_children: bool
-    is_for_disabled: bool
-    is_for_animals: bool
 
     class Config:
         orm_mode = True

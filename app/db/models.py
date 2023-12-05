@@ -101,10 +101,6 @@ class EventORM(Base):
     is_closed_sun: Mapped[bool]
     is_during_day: Mapped[bool]
     is_during_night: Mapped[bool]
-    is_countryside: Mapped[bool]
-    is_for_children: Mapped[bool]
-    is_for_disabled: Mapped[bool]
-    is_for_animals: Mapped[bool]
 
     # additional info
     name: Mapped[Optional[str]]
