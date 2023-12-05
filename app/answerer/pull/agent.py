@@ -20,9 +20,13 @@ from app.answerer.pull.prompts import (
     EVENT_SYSTEM_PROMPT,
 )
 from app.answerer.schemas import AnswerOutput
-from app.db.enums import AnswerType
-from app.db.schemas import BusinessInDB
+from app.db.enums import AnswerType, CityEnum
+from app.db.schemas import BusinessInDB, Event
+from app.db.services import register_event
+from app.loader.loader import Loader
 from app.utils.conn import get_llm
+
+PULL_CHAT_SOURCE = "pullchat_v1"
 
 
 class UpdateBusinessToolInput(BaseModel):
@@ -44,7 +48,7 @@ class RegisterEventToolInput(BaseModel):
 class AiAgent:
     def __init__(
         self,
-        db: Session,
+        db: Session | None,
         business: BusinessInDB,
         today_date: datetime.date | None = None,
     ) -> None:
@@ -60,9 +64,14 @@ class AiAgent:
         self,
         name: str,
         description: str,
-    ) -> str:
+    ) -> AnswerOutput:
         # TODO: register business information
-        return MESSAGE_UPDATED_BUSINESS.format(name=name, description=description)
+        # if self.db is not None:
+        #     db_business = update_business()
+        return AnswerOutput(
+            answer=MESSAGE_UPDATED_BUSINESS.format(name=name, description=description),
+            type=AnswerType.template,
+        )
 
     def register_event(
         self,
@@ -72,15 +81,53 @@ class AiAgent:
         start_date: datetime.date,
         end_date: datetime.date | None = None,
         location: str | None = None,
-    ) -> str:
-        # TODO: register event
-        return MESSAGE_REGISTERED_EVENT.format(
-            name=name,
-            description=description,
-            url=url,
-            start_date=start_date,
-            end_date=end_date,
-            location=location,
+    ) -> AnswerOutput:
+        if self.db is not None:
+            event = Event(
+                description="\n".join([name, description]),
+                is_vectorized=False,
+                business_id=self.business.id,
+                city=CityEnum.Torino,
+                start_date=start_date,
+                end_date=end_date if end_date is not None else start_date,
+                is_closed_mon=False,
+                is_closed_tue=False,
+                is_closed_wed=False,
+                is_closed_thu=False,
+                is_closed_fri=False,
+                is_closed_sat=False,
+                is_closed_sun=False,
+                is_during_day=True,  # TODO: get this info?
+                is_during_night=True,  # TODO: get this info?
+                is_countryside=False,  # TODO: remove this?
+                is_for_children=False,  # TODO: remove this?
+                is_for_disabled=False,  # TODO: remove this?
+                is_for_animals=False,  # TODO: remove this?
+                name=name,
+                location=location,
+                url=url,
+                price_level=None,
+            )
+            db_event = register_event(
+                db=self.db, event_in=event, source=PULL_CHAT_SOURCE
+            )
+            events_loader = Loader(db=self.db)
+            events_loader.vectorize_event(db_event)
+            event_ids = [db_event.id]
+        else:
+            event_ids = []
+
+        return AnswerOutput(
+            answer=MESSAGE_REGISTERED_EVENT.format(
+                name=name,
+                description=description,
+                url=url,
+                start_date=start_date,
+                end_date=end_date,
+                location=location,
+            ),
+            type=AnswerType.template,
+            used_event_ids=event_ids,
         )
 
     def set_tools(self) -> None:
@@ -143,6 +190,4 @@ class AiAgent:
 
         tool_input = tool.args_schema(**agent_output[0].tool_input)
         logging.info(f"Calling {tool.name} tool with input: {tool_input}")
-        tool_output = tool.run(tool_input.dict())
-        # TODO: add created event id to AnswerOutput
-        return AnswerOutput(answer=tool_output, type=AnswerType.template)
+        return tool.run(tool_input.dict())
