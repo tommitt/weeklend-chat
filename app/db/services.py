@@ -121,6 +121,16 @@ def get_business(db: Session, phone_number: str) -> BusinessORM | None:
     )
 
 
+def update_business_info(
+    db: Session, business_id: int, name: str, description: str
+) -> BusinessORM:
+    db_business = get_user_by_id(db=db, id=business_id, orm=BusinessORM)
+    db_business.name = name
+    db_business.description = description
+    db.commit()
+    return db_business
+
+
 def register_business(db: Session, business_in: Business) -> BusinessORM:
     db_business = get_business(db, phone_number=business_in.phone_number)
     if db_business:

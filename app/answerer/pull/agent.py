@@ -22,7 +22,7 @@ from app.answerer.pull.prompts import (
 from app.answerer.schemas import AnswerOutput
 from app.db.enums import AnswerType, CityEnum
 from app.db.schemas import BusinessInDB, Event
-from app.db.services import register_event
+from app.db.services import register_event, update_business_info
 from app.loader.loader import Loader
 from app.utils.conn import get_llm
 
@@ -65,9 +65,13 @@ class AiAgent:
         name: str,
         description: str,
     ) -> AnswerOutput:
-        # TODO: register business information
-        # if self.db is not None:
-        #     db_business = update_business()
+        if self.db is not None:
+            _ = update_business_info(
+                db=self.db,
+                business_id=self.business.id,
+                name=name,
+                description=description,
+            )
         return AnswerOutput(
             answer=MESSAGE_UPDATED_BUSINESS.format(name=name, description=description),
             type=AnswerType.template,
