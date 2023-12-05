@@ -13,6 +13,11 @@ class Loader:
         self.events: list[EventORM] = []
 
     def vectorize_event(self, db_event: EventORM) -> None:
+        if db_event.is_vectorized:
+            raise Exception(
+                f"Can't vectorize event (id={db_event.id}) which is already vectorized."
+            )
+
         event_doc = Document(
             page_content=db_event.description,
             metadata=EventInVectorstore.from_event_orm(db_event).__dict__,
