@@ -19,7 +19,7 @@ from app.answerer.push.prompts import (
     RECOMMENDER_SYSTEM_PROMPT,
     SEARCH_TOOL_DESCRIPTION,
 )
-from app.answerer.schemas import AnswerOutput
+from app.answerer.schemas import AnswerOutput, DayTimeEnum
 from app.constants import N_EVENTS_CONTEXT, N_EVENTS_MAX
 from app.db.enums import AnswerType
 from app.db.services import get_event_by_id
@@ -29,14 +29,12 @@ from app.utils.datetime_utils import date_to_timestamp
 
 class SearchEventsToolInput(BaseModel):
     user_query: str = Field(description="The user's query")
-    start_date: Optional[str] = Field(
-        description="The start date of the range in format 'YYYY-MM-DD'"
+    start_date: Optional[datetime.date] = Field(
+        description="The start date of the range"
     )
-    end_date: Optional[str] = Field(
-        description="The end date of the range in format 'YYYY-MM-DD'"
-    )
-    time: Optional[str] = Field(
-        description="This is the time of the day. It can be either 'daytime', 'nighttime' or 'both'"
+    end_date: Optional[datetime.date] = Field(description="The end date of the range")
+    time_of_day: Optional[DayTimeEnum] = Field(
+        description="This is the time of the day"
     )
 
 
@@ -54,21 +52,17 @@ class AiAgent:
     def search_events(
         self,
         user_query: str,
-        start_date: str | None = None,
-        end_date: str | None = None,
-        time: str | None = None,
+        start_date: datetime.date | None = None,
+        end_date: datetime.date | None = None,
+        time_of_day: DayTimeEnum | None = None,
     ) -> str:
         """Search available events that are most relevant to the user's query."""
         # filter out events based on start and end dates
-        start_date_dt = (
-            self.today_date
-            if start_date is None
-            else datetime.datetime.strptime(start_date, "%Y-%m-%d").date()
-        )
+        start_date_dt = self.today_date if start_date is None else start_date
         end_date_dt = (
             self.today_date + datetime.timedelta(days=6)
             if end_date is None
-            else datetime.datetime.strptime(end_date, "%Y-%m-%d").date()
+            else end_date
         )
 
         filters = [
@@ -115,11 +109,11 @@ class AiAgent:
         filters.append(Operation(operator="or", arguments=filters_closed_days))
 
         # filter out events based on time of the day
-        if time == "daytime":
+        if time_of_day == DayTimeEnum.daytime:
             filters.append(
                 Comparison(comparator="eq", attribute="is_during_day", value=True)
             )
-        elif time == "nighttime":
+        elif time_of_day == DayTimeEnum.nighttime:
             filters.append(
                 Comparison(comparator="eq", attribute="is_during_night", value=True)
             )

@@ -26,5 +26,6 @@ La registrazione dell'evento è stata completata con successo:
 - URL: {url}
 - Data di inizio: {start_date}
 - Data di fine: {end_date}
-- Luogo: {location}\
+- Luogo: {location}
+- Diurno/notturno: {time_of_day}\
 """

@@ -19,7 +19,7 @@ from app.answerer.pull.prompts import (
     BUSINESS_SYSTEM_PROMPT,
     EVENT_SYSTEM_PROMPT,
 )
-from app.answerer.schemas import AnswerOutput
+from app.answerer.schemas import AnswerOutput, DayTimeEnum
 from app.db.enums import AnswerType, CityEnum
 from app.db.schemas import BusinessInDB, Event
 from app.db.services import register_event, update_business_info
@@ -42,7 +42,10 @@ class RegisterEventToolInput(BaseModel):
     url: str = Field(description="External URL linking to the event's website")
     start_date: datetime.date = Field(description="The start date of the event")
     end_date: Optional[datetime.date] = Field(description="The end date of the event")
-    location: Optional[str] = Field(description="Location where the event happens.")
+    location: Optional[str] = Field(description="Location where the event happens")
+    time_of_day: Optional[DayTimeEnum] = Field(
+        description="This is the time of the day"
+    )
 
 
 class AiAgent:
@@ -85,6 +88,7 @@ class AiAgent:
         start_date: datetime.date,
         end_date: datetime.date | None = None,
         location: str | None = None,
+        time_of_day: DayTimeEnum | None = None,
     ) -> AnswerOutput:
         if self.db is not None:
             event = Event(
@@ -94,8 +98,12 @@ class AiAgent:
                 city=CityEnum.Torino,
                 start_date=start_date,
                 end_date=end_date if end_date is not None else start_date,
-                is_during_day=True,  # TODO: get this info?
-                is_during_night=True,  # TODO: get this info?
+                is_during_day=(
+                    time_of_day in [DayTimeEnum.daytime, DayTimeEnum.entire_day]
+                ),
+                is_during_night=(
+                    time_of_day in [DayTimeEnum.nighttime, DayTimeEnum.entire_day]
+                ),
                 name=name,
                 location=location,
                 url=url,
@@ -117,6 +125,7 @@ class AiAgent:
                 start_date=start_date,
                 end_date=end_date,
                 location=location,
+                time_of_day=time_of_day,
             ),
             type=AnswerType.template,
             used_event_ids=event_ids,

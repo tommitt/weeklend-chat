@@ -1,3 +1,5 @@
+from enum import Enum
+
 from pydantic import BaseModel
 
 from app.db.enums import AnswerType
@@ -20,3 +22,9 @@ class AnswerOutput(BaseModel):
     type: AnswerType
     user_id: int | None = None
     used_event_ids: list[int] | None = None
+
+
+class DayTimeEnum(str, Enum):
+    daytime = "daytime"
+    nighttime = "nighttime"
+    entire_day = "entire_day"
