@@ -41,7 +41,6 @@ def ui() -> None:
     user_query = st.chat_input("Chiedi qualcosa...")
     if user_query:
         st.chat_message("user").markdown(user_query)
-        st.session_state["messages"].append({"role": "user", "content": user_query})
 
         with st.spinner("Sto pensando..."):
             response = requests.post(
@@ -57,8 +56,8 @@ def ui() -> None:
             )
             answer_out = AnswerOutput(**response.json())
 
-        with st.chat_message("assistant"):
-            st.markdown(answer_out.answer)
-        st.session_state["messages"].append(
-            {"role": "assistant", "content": answer_out.answer}
-        )
+        st.chat_message("assistant").markdown(answer_out.answer)
+        st.session_state["messages"] += [
+            {"role": "user", "content": user_query},
+            {"role": "assistant", "content": answer_out.answer},
+        ]

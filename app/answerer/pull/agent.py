@@ -17,7 +17,9 @@ from app.answerer.pull.messages import (
 from app.answerer.pull.prompts import (
     BUSINESS_INFO_PROMPT,
     BUSINESS_SYSTEM_PROMPT,
+    BUSINESS_TOOL_DESCRIPTION,
     EVENT_SYSTEM_PROMPT,
+    EVENT_TOOL_DESCRIPTION,
 )
 from app.answerer.schemas import AnswerOutput, DayTimeEnum
 from app.db.enums import AnswerType, CityEnum
@@ -139,13 +141,13 @@ class AiAgent:
         """
         self.business_tool = StructuredTool(
             name="update_business",
-            description="Register information of a business.",
+            description=BUSINESS_TOOL_DESCRIPTION,
             args_schema=UpdateBusinessToolInput,
             func=self.update_business,
         )
         self.event_tool = StructuredTool(
             name="register_event",
-            description="Register an event to the database.",
+            description=EVENT_TOOL_DESCRIPTION,
             args_schema=RegisterEventToolInput,
             func=self.register_event,
         )
