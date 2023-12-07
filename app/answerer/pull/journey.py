@@ -25,7 +25,7 @@ class BusinessJourney:
         self, phone_number: str
     ) -> tuple[AnswerOutput, BusinessORM]:
         db_user = register_business(
-            db=self.db, user_in=Business(phone_number=phone_number)
+            db=self.db, business_in=Business(phone_number=phone_number)
         )
         output = AnswerOutput(answer=MESSAGE_WELCOME, type=AnswerType.template)
         return output, db_user
