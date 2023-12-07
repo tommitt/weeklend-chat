@@ -204,7 +204,7 @@ def register_temp_conversation(
     """
     fake_user = get_user_by_id(db=db, id=FAKE_USER_ID, orm=user_orm)
     if fake_user is None:
-        if user_orm == type[UserORM]:
+        if user_orm == UserORM:
             fake_user = UserORM(
                 id=FAKE_USER_ID,
                 phone_number="000000000000",
@@ -212,7 +212,7 @@ def register_temp_conversation(
                 is_admin=False,
                 registered_at=datetime.datetime.utcnow(),
             )
-        elif user_orm == type[BusinessORM]:
+        elif user_orm == BusinessORM:
             fake_user = BusinessORM(
                 id=FAKE_USER_ID,
                 phone_number="000000000000",
