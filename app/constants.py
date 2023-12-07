@@ -42,7 +42,6 @@ postgresql\
 """
 
 WHATSAPP_API_TOKEN = os.environ.get("WHATSAPP_API_TOKEN")
-# TODO: change/add these secrets in production
 WHATSAPP_PUSH_NUMBER_ID = os.environ.get("WHATSAPP_PUSH_NUMBER_ID")
 WHATSAPP_PULL_NUMBER_ID = os.environ.get("WHATSAPP_PULL_NUMBER_ID")
 WHATSAPP_HOOK_TOKEN = os.environ.get("WHATSAPP_HOOK_TOKEN")

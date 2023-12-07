@@ -41,6 +41,7 @@ class RegisterEventToolInput(BaseModel):
     description: str = Field(
         description="The description of the event. It should be at least 240 characters"
     )
+    # TODO: llm should never invent the URL
     url: str = Field(description="External URL linking to the event's website")
     start_date: datetime.date = Field(description="The start date of the event")
     end_date: Optional[datetime.date] = Field(description="The end date of the event")

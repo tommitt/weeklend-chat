@@ -25,7 +25,6 @@ class UserORM(Base):
         return f"UserORM(id={self.id!r}, phone_number={self.phone_number!r})"
 
 
-# TODO: create migration
 class BusinessORM(Base):
     __tablename__ = "businesses"
 
