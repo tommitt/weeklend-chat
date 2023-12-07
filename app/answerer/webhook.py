@@ -58,6 +58,7 @@ async def webhook_get_request(request: Request):
 
 @webhook.post("/webhooks")
 async def webhook_post_request(payload: WebhookPayload, db: Session = Depends(get_db)):
+    db_conversation = None
     try:
         payload_value = payload.entry[0]["changes"][0]["value"]
         if "messages" not in payload_value:
