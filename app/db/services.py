@@ -14,13 +14,28 @@ from app.constants import (
     PINECONE_NAMESPACE,
 )
 from app.db.enums import AnswerType
-from app.db.models import ConversationORM, EventORM, UserORM
-from app.db.schemas import Conversation, ConversationTemp, ConversationUpd, Event, User
+from app.db.models import (
+    BusinessConversationORM,
+    BusinessORM,
+    ConversationORM,
+    EventORM,
+    UserORM,
+)
+from app.db.schemas import (
+    Business,
+    Conversation,
+    ConversationTemp,
+    ConversationUpd,
+    Event,
+    User,
+)
 
 
 # User
-def get_user_by_id(db: Session, id: int) -> UserORM | None:
-    return db.query(UserORM).filter_by(id=id).first()
+def get_user_by_id(
+    db: Session, id: int, orm: type[UserORM] | type[BusinessORM]
+) -> UserORM | BusinessORM | None:
+    return db.query(orm).filter_by(id=id).first()
 
 
 def get_user(db: Session, phone_number: str) -> UserORM | None:
@@ -99,45 +114,78 @@ def register_user(db: Session, user_in: User) -> UserORM:
     return db_user
 
 
+# Business
+def get_business(db: Session, phone_number: str) -> BusinessORM | None:
+    return (
+        db.query(BusinessORM).filter(BusinessORM.phone_number == phone_number).first()
+    )
+
+
+def update_business_info(
+    db: Session, business_id: int, name: str, description: str
+) -> BusinessORM:
+    db_business = get_user_by_id(db=db, id=business_id, orm=BusinessORM)
+    db_business.name = name
+    db_business.description = description
+    db.commit()
+    return db_business
+
+
+def register_business(db: Session, business_in: Business) -> BusinessORM:
+    db_business = get_business(db, phone_number=business_in.phone_number)
+    if db_business:
+        raise HTTPException(status_code=400, detail="Phone number already registered")
+
+    business_dict = business_in.dict()
+    business_dict["registered_at"] = datetime.datetime.utcnow()
+
+    db_business = BusinessORM(**business_dict)
+    db.add(db_business)
+    db.commit()
+    db.refresh(db_business)
+    return db_business
+
+
 # Conversation
-def get_conversation_by_waid(db: Session, wa_id: str) -> ConversationORM | None:
+def get_conversation_by_waid(
+    db: Session, wa_id: str, orm: type[ConversationORM] | type[BusinessConversationORM]
+) -> ConversationORM | BusinessConversationORM | None:
     """Get single conversation from the WhatsApp ID."""
-    return db.query(ConversationORM).filter(ConversationORM.wa_id == wa_id).first()
+    return db.query(orm).filter(orm.wa_id == wa_id).first()
 
 
 def get_user_conversations(
     db: Session,
     user_id: int,
     from_datetime: datetime.datetime | None,
+    orm: type[ConversationORM] | type[BusinessConversationORM],
     max_messages: int = 100,
-) -> list[ConversationORM]:
+) -> list[ConversationORM | BusinessConversationORM]:
     """
     Get last conversations of a user from a certain datetime.
     Conversations are returned ordered from the oldest to the newest.
     """
     return (
-        db.query(ConversationORM)
+        db.query(orm)
         .filter(
-            ConversationORM.user_id == user_id,
-            (
-                ConversationORM.registered_at >= from_datetime
-                if from_datetime is not None
-                else True
-            ),
+            orm.user_id == user_id,
+            (orm.registered_at >= from_datetime if from_datetime is not None else True),
         )
-        .order_by(desc(ConversationORM.id))
+        .order_by(desc(orm.id))
         .limit(max_messages)
         .all()
     )[::-1]
 
 
 def register_conversation(
-    db: Session, conversation_in: Conversation
-) -> ConversationORM:
+    db: Session,
+    conversation_in: Conversation,
+    orm: type[ConversationORM] | type[BusinessConversationORM],
+) -> ConversationORM | BusinessConversationORM:
     conversation_dict = conversation_in.dict()
     conversation_dict["registered_at"] = datetime.datetime.utcnow()
 
-    db_conversation = ConversationORM(**conversation_dict)
+    db_conversation = orm(**conversation_dict)
     db.add(db_conversation)
     db.commit()
     db.refresh(db_conversation)
@@ -145,25 +193,38 @@ def register_conversation(
 
 
 def register_temp_conversation(
-    db: Session, conversation_temp_in: ConversationTemp
-) -> ConversationORM:
+    db: Session,
+    conversation_temp_in: ConversationTemp,
+    user_orm: type[UserORM] | type[BusinessORM],
+    conversation_orm: type[ConversationORM] | type[BusinessConversationORM],
+) -> ConversationORM | BusinessConversationORM:
     """
     Conversation is registered temporarily with no answer to avoid
     accepting a request with the same message while it is being processed.
     """
-    fake_user = get_user_by_id(db=db, id=FAKE_USER_ID)
+    fake_user = get_user_by_id(db=db, id=FAKE_USER_ID, orm=user_orm)
     if fake_user is None:
-        fake_user = UserORM(
-            id=FAKE_USER_ID,
-            phone_number="000000000000",
-            is_blocked=False,
-            is_admin=False,
-            registered_at=datetime.datetime.utcnow(),
-        )
+        if user_orm == type[UserORM]:
+            fake_user = UserORM(
+                id=FAKE_USER_ID,
+                phone_number="000000000000",
+                is_blocked=False,
+                is_admin=False,
+                registered_at=datetime.datetime.utcnow(),
+            )
+        elif user_orm == type[BusinessORM]:
+            fake_user = BusinessORM(
+                id=FAKE_USER_ID,
+                phone_number="000000000000",
+                registered_at=datetime.datetime.utcnow(),
+            )
+        else:
+            raise Exception(f"User ORM of type {user_orm} is not accepted.")
         db.add(fake_user)
         db.commit()
 
     db_conversation = register_conversation(
+        db=db,
         conversation_in=Conversation(
             from_message=conversation_temp_in.from_message,
             wa_id=conversation_temp_in.wa_id,
@@ -174,23 +235,25 @@ def register_temp_conversation(
             answer_type=AnswerType.unanswered,
             used_event_ids="null",
         ),
-        db=db,
+        orm=conversation_orm,
     )
     return db_conversation
 
 
 def update_temp_conversation(
     db: Session,
-    db_conversation: ConversationORM,
+    db_conversation: ConversationORM | BusinessConversationORM,
     conversation_update_in: ConversationUpd,
-) -> ConversationORM:
+) -> ConversationORM | BusinessConversationORM:
     for attr_name, attr_value in vars(conversation_update_in).items():
         setattr(db_conversation, attr_name, attr_value)
     db.commit()
     return db_conversation
 
 
-def delete_temp_conversation(db: Session, db_conversation: ConversationORM) -> None:
+def delete_temp_conversation(
+    db: Session, db_conversation: ConversationORM | BusinessConversationORM
+) -> None:
     if db_conversation.user_id == FAKE_USER_ID:
         db.delete(db_conversation)
         db.commit()

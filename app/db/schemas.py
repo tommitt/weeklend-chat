@@ -22,6 +22,20 @@ class UserInDB(User):
         orm_mode = True
 
 
+class Business(BaseModel):
+    phone_number: str
+    name: str | None = None
+    description: str | None = None
+
+
+class BusinessInDB(Business):
+    id: int
+    registered_at: datetime.datetime
+
+    class Config:
+        orm_mode = True
+
+
 class ConversationTemp(BaseModel):
     from_message: str
     wa_id: str
@@ -50,30 +64,27 @@ class ConversationInDb(Conversation):
 class Event(BaseModel):
     description: str
     is_vectorized: bool
+    business_id: int | None = None
 
     # metadata
     city: CityEnum
     start_date: datetime.date
     end_date: datetime.date
-    is_closed_mon: bool
-    is_closed_tue: bool
-    is_closed_wed: bool
-    is_closed_thu: bool
-    is_closed_fri: bool
-    is_closed_sat: bool
-    is_closed_sun: bool
+    is_closed_mon: bool = False
+    is_closed_tue: bool = False
+    is_closed_wed: bool = False
+    is_closed_thu: bool = False
+    is_closed_fri: bool = False
+    is_closed_sat: bool = False
+    is_closed_sun: bool = False
     is_during_day: bool
     is_during_night: bool
-    is_countryside: bool
-    is_for_children: bool
-    is_for_disabled: bool
-    is_for_animals: bool
 
     # additional info
     name: str | None
     location: str | None
     url: str | None
-    price_level: PriceLevel | None
+    price_level: PriceLevel | None = None
 
 
 class EventInDb(Event):
@@ -102,10 +113,6 @@ class EventInVectorstore(BaseModel):
     is_closed_sun: bool
     is_during_day: bool
     is_during_night: bool
-    is_countryside: bool
-    is_for_children: bool
-    is_for_disabled: bool
-    is_for_animals: bool
 
     class Config:
         orm_mode = True

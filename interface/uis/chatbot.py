@@ -1,16 +1,14 @@
+import datetime
+
 import requests
 import streamlit as st
 
+from app.answerer.chats import ChatType
 from app.answerer.schemas import AnswerOutput
+from app.db.schemas import BusinessInDB
+from app.utils.conversation_utils import streamlit_to_langchain_conversation
 from interface.backend import FASTAPI_URL
 from interface.utils.schemas import ChatbotInput
-
-
-def streamlit_to_langchain_conversation(messages: list[dict]) -> list[tuple]:
-    conversation = []
-    for message in messages:
-        conversation.append((message["role"], message["content"]))
-    return conversation
 
 
 def ui() -> None:
@@ -21,6 +19,20 @@ def ui() -> None:
         st.session_state["messages"] = []
 
     ref_date = st.date_input("Data di riferimento")
+    chat_type = st.selectbox("Tipo di chat", options=[e.value for e in ChatType])
+    if chat_type == ChatType.pull:
+        col1, col2 = st.columns(2)
+        business_name = col1.text_input("Nome del Business")
+        business_description = col2.text_input("Descrizione del Business")
+        business = BusinessInDB(
+            id=-9,
+            phone_number="999999999999",
+            registered_at=datetime.datetime.now(),
+            name=None if business_name == "" else business_name,
+            description=None if business_description == "" else business_description,
+        )
+    else:
+        business = None
 
     for message in st.session_state["messages"]:
         with st.chat_message(message["role"]):
@@ -29,23 +41,23 @@ def ui() -> None:
     user_query = st.chat_input("Chiedi qualcosa...")
     if user_query:
         st.chat_message("user").markdown(user_query)
-        st.session_state["messages"].append({"role": "user", "content": user_query})
 
         with st.spinner("Sto pensando..."):
             response = requests.post(
-                f"{FASTAPI_URL}/chatbot",
+                f"{FASTAPI_URL}/chatbot/{chat_type}",
                 data=ChatbotInput(
                     user_query=user_query,
                     today_date=ref_date,
                     previous_conversation=streamlit_to_langchain_conversation(
                         st.session_state["messages"]
                     ),
+                    business=business,
                 ).json(),
             )
             answer_out = AnswerOutput(**response.json())
 
-        with st.chat_message("assistant"):
-            st.markdown(answer_out.answer)
-        st.session_state["messages"].append(
-            {"role": "assistant", "content": answer_out.answer}
-        )
+        st.chat_message("assistant").markdown(answer_out.answer)
+        st.session_state["messages"] += [
+            {"role": "user", "content": user_query},
+            {"role": "assistant", "content": answer_out.answer},
+        ]

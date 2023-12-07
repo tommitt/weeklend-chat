@@ -72,13 +72,6 @@ class GuidatorinoScraper(BaseScraper):
                 event_dict["url"] = event_url
                 event_dict["title"] = content.find("h3").find("a").text
 
-                categories = content.find("ul", {"class": "event-categories"})
-                event_dict["is_for_children"] = False
-                if categories is not None:
-                    for cat in categories.find_all("li"):
-                        if cat.find("a").text == "Bambini":
-                            event_dict["is_for_children"] = True
-
                 dates = [
                     datetime.datetime.strptime(
                         convert_italian_month(d), "%d %m %Y"
@@ -115,7 +108,6 @@ class GuidatorinoScraper(BaseScraper):
                 )
                 event_dict["city"] = CityEnum.Torino
                 event_dict["location"] = location
-                event_dict["is_countryside"] = city != CityEnum.Torino
 
                 self.events_list.append(event_dict)
 
@@ -159,24 +151,12 @@ class GuidatorinoScraper(BaseScraper):
                     city=event_dict["city"],
                     start_date=event_dict["start_date"],
                     end_date=event_dict["end_date"],
-                    is_closed_mon=False,
-                    is_closed_tue=False,
-                    is_closed_wed=False,
-                    is_closed_thu=False,
-                    is_closed_fri=False,
-                    is_closed_sat=False,
-                    is_closed_sun=False,
                     is_during_day=event_dict["is_during_day"],
                     is_during_night=event_dict["is_during_night"],
-                    is_countryside=event_dict["is_countryside"],
-                    is_for_children=event_dict["is_for_children"],
-                    is_for_disabled=False,
-                    is_for_animals=False,
                     # additional info
                     name=event_dict["title"],
                     location=event_dict["location"],
                     url=event_dict["url"],
-                    price_level=None,
                 )
             )
             self.events_list.remove(event_dict)
@@ -232,7 +212,6 @@ class LovelangheScraper(BaseScraper):
                         "h2", {"class", "t-event__surtitle uppercase--md"}
                     ).text.split(b"\xe2\x80\x94".decode("utf-8"))
                 ]
-                is_countryside = False if city == "Torino" else True
 
                 title = soup.find("h1", {"class": "t-event__title condensed--xl"}).text
                 subtitle = soup.find("p", {"class": "t-event__subtitle serif--md"}).text
@@ -281,24 +260,12 @@ class LovelangheScraper(BaseScraper):
                         city=CityEnum.Torino,
                         start_date=start_date,
                         end_date=end_date,
-                        is_closed_mon=False,
-                        is_closed_tue=False,
-                        is_closed_wed=False,
-                        is_closed_thu=False,
-                        is_closed_fri=False,
-                        is_closed_sat=False,
-                        is_closed_sun=False,
                         is_during_day=is_during_day,
                         is_during_night=is_during_night,
-                        is_countryside=is_countryside,
-                        is_for_children=False,
-                        is_for_disabled=False,
-                        is_for_animals=False,
                         # additional info
                         name=title,
                         location=location,
                         url=url,
-                        price_level=None,
                     )
                 )
 

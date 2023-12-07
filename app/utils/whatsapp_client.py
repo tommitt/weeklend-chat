@@ -1,19 +1,18 @@
 import requests
 
-from app.constants import WHATSAPP_API_TOKEN, WHATSAPP_NUMBER_ID
+from app.constants import WHATSAPP_API_TOKEN
 
 
 class WhatsappWrapper:
     API_URL = "https://graph.facebook.com/v17.0/"
     API_TOKEN = WHATSAPP_API_TOKEN
-    NUMBER_ID = WHATSAPP_NUMBER_ID
 
-    def __init__(self) -> None:
+    def __init__(self, number_id: str) -> None:
         self.headers = {
             "Authorization": f"Bearer {self.API_TOKEN}",
             "Content-Type": "application/json",
         }
-        self.url = self.API_URL + self.NUMBER_ID
+        self.url = self.API_URL + number_id
 
     def send_message(
         self,

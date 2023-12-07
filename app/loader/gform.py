@@ -109,9 +109,6 @@ class GFormLoader:
             "opening_period": "È un evento principalmente diurno o principalmente notturno?",
             "closing_days": None,
             "price_level": "Qual è il prezzo medio per persona a questo evento?",
-            "is_for_disabled": "Ingresso per disabili?",
-            "is_for_children": "Esperienza adatta a famiglie e bambini?.1",
-            "is_for_animals": "Ingresso consentito agli animali?.1",
             "url": "Inserisci l'indirizzo web legato all'evento che gli utenti riceveranno",
         },
         "Locale": {
@@ -126,9 +123,6 @@ class GFormLoader:
             "opening_period": "Il locale è principalmente diurno o principalmente notturno?",
             "closing_days": "Giorno di chiusura settimanale ",
             "price_level": "Qual è il prezzo medio per persona in questo locale?",
-            "is_for_disabled": "Ha Ingresso per disabili?",
-            "is_for_children": "Esperienza adatta a famiglie e bambini?",
-            "is_for_animals": "Ingresso consentito agli animali?",
             "url": "Inserisci l'indirizzo web legato al locale che gli utenti riceveranno",
         },
     }
@@ -191,13 +185,6 @@ class GFormLoader:
         "> 100€": PriceLevel.very_expensive,
     }
 
-    def _yes_no_flag(self, string: str) -> bool:
-        if string.lower() == "si":
-            return True
-        if string.lower() == "no":
-            return False
-        raise ValueError(f"Yes/No flag has a different value: {string}.")
-
     def _optional_column(self, string: str) -> str | None:
         if pd.isna(string) or string == "-" or string == "":
             return None
@@ -252,7 +239,6 @@ class GFormLoader:
                     + row[cols["province"]]
                 ).strip()
                 city = CityEnum.Torino
-                is_countryside = not row[cols["province"]] == "Torino"
 
                 closed_days = {
                     "is_closed_mon": False,
@@ -273,10 +259,6 @@ class GFormLoader:
                 url = self._optional_column(row[cols["url"]])
 
                 price_level = self._PRICE_LEVEL_MAP[row[cols["price_level"]]]
-
-                is_for_disabled = self._yes_no_flag(row[cols["is_for_disabled"]])
-                is_for_children = self._yes_no_flag(row[cols["is_for_children"]])
-                is_for_animals = self._yes_no_flag(row[cols["is_for_animals"]])
 
                 is_during_day = False
                 is_during_night = False
@@ -307,10 +289,6 @@ class GFormLoader:
                     is_closed_sun=closed_days["is_closed_sun"],
                     is_during_day=is_during_day,
                     is_during_night=is_during_night,
-                    is_countryside=is_countryside,
-                    is_for_children=is_for_children,
-                    is_for_disabled=is_for_disabled,
-                    is_for_animals=is_for_animals,
                     name=name,
                     location=location,
                     url=url,

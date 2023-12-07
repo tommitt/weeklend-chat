@@ -3,7 +3,7 @@ import datetime
 import pytest
 from sqlalchemy.orm import Session
 
-from app.answerer.answerer import Answerer
+from app.answerer.push import AiAgent
 from app.db.enums import AnswerType
 
 
@@ -13,8 +13,8 @@ def ref_date() -> datetime.date:
 
 
 @pytest.fixture(scope="module")
-def answerer(database_session: Session, ref_date: datetime.date) -> Answerer:
-    return Answerer(db=database_session, today_date=ref_date)
+def ai_agent(database_session: Session, ref_date: datetime.date) -> AiAgent:
+    return AiAgent(db=database_session, today_date=ref_date)
 
 
 queries_and_expected_answer_types = {
@@ -26,10 +26,10 @@ queries_and_expected_answer_types = {
 @pytest.mark.parametrize(
     "user_query, expected_answer_type", queries_and_expected_answer_types.items()
 )
-def test_answerer_run(
-    answerer: Answerer,
+def test_agent_run(
+    ai_agent: AiAgent,
     user_query: str,
     expected_answer_type: AnswerType,
 ) -> None:
-    response = answerer.run(user_query=user_query)
+    response = ai_agent.run(user_query=user_query)
     assert response.type == expected_answer_type

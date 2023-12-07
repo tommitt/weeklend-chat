@@ -1,6 +1,6 @@
-from typing import Optional
+from enum import Enum
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from app.db.enums import AnswerType
 
@@ -10,20 +10,20 @@ class WebhookPayload(BaseModel):
     object: str
 
 
+class MessageInput(BaseModel):
+    wa_id: str
+    phone_number: str
+    body: str
+    timestamp: int
+
+
 class AnswerOutput(BaseModel):
     answer: str | None
     type: AnswerType
     used_event_ids: list[int] | None = None
 
 
-class SearchEventsToolInput(BaseModel):
-    user_query: str = Field(description="The user's query")
-    start_date: Optional[str] = Field(
-        description="The start date of the range in format 'YYYY-MM-DD'"
-    )
-    end_date: Optional[str] = Field(
-        description="The end date of the range in format 'YYYY-MM-DD'"
-    )
-    time: Optional[str] = Field(
-        description="This is the time of the day. It can be either 'daytime', 'nighttime' or 'both'"
-    )
+class DayTimeEnum(str, Enum):
+    daytime = "daytime"
+    nighttime = "nighttime"
+    entire_day = "entire_day"
