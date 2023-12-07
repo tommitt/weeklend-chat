@@ -103,7 +103,7 @@ async def webhook_post_request(payload: WebhookPayload, db: Session = Depends(ge
             conversation_orm=chat.conversation_orm,
         )
 
-        output = chat.user_journey.run(message)
+        output, output_user_id = chat.user_journey.run(message)
 
         if output.answer is not None:
             wa_client = WhatsappWrapper(number_id=chat.wa_number_id)
@@ -121,7 +121,7 @@ async def webhook_post_request(payload: WebhookPayload, db: Session = Depends(ge
             db=db,
             db_conversation=db_conversation,
             conversation_update_in=ConversationUpd(
-                user_id=output.user_id,
+                user_id=output_user_id,
                 to_message=output.answer,
                 answer_type=output.type,
                 used_event_ids=json.dumps(output.used_event_ids),

@@ -147,7 +147,7 @@ class UserJourney:
 
         return output
 
-    def run(self, message: MessageInput) -> AnswerOutput:
+    def run(self, message: MessageInput) -> tuple[AnswerOutput, int]:
         current_timestamp = int(datetime.datetime.utcnow().timestamp())
 
         db_user = get_user(self.db, phone_number=message.phone_number)
@@ -164,5 +164,5 @@ class UserJourney:
                 output = self._standard_user_journey(
                     db_user=db_user, user_query=message.body
                 )
-        output.user_id = db_user.id
-        return output
+
+        return (output, db_user.id)
