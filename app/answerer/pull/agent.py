@@ -102,10 +102,10 @@ class AiAgent:
                 start_date=start_date,
                 end_date=end_date if end_date is not None else start_date,
                 is_during_day=(
-                    time_of_day in [DayTimeEnum.daytime, DayTimeEnum.entire_day]
+                    time_of_day in [DayTimeEnum.daytime, DayTimeEnum.entire_day, None]
                 ),
                 is_during_night=(
-                    time_of_day in [DayTimeEnum.nighttime, DayTimeEnum.entire_day]
+                    time_of_day in [DayTimeEnum.nighttime, DayTimeEnum.entire_day, None]
                 ),
                 name=name,
                 location=location,
