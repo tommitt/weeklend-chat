@@ -74,18 +74,13 @@ async def control_panel_api_loader_show_not_vectorized_events(
     db: Session = Depends(get_db),
 ):
     agent = Loader(db=db)
-    agent.get_not_vectorized_events()
-    return [e.name for e in agent.events]
+    events = agent.get_not_vectorized_events()
+    return [e.name for e in events]
 
 
 @app.post("/control_panel/loader/vectorize")
 async def control_panel_api_loader_vectorize_events(db: Session = Depends(get_db)):
     agent = Loader(db=db)
-    agent.get_not_vectorized_events()
-
-    if len(agent.events) == 0:
-        return {"status": status.HTTP_200_OK, "detail": "Nothing to vectorize."}
-
     agent.vectorize_events()
     return {"status": status.HTTP_200_OK, "detail": "Everything has been vectorized."}
 

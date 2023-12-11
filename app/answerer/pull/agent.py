@@ -115,7 +115,8 @@ class AiAgent:
                 db=self.db, event_in=event, source=PULL_CHAT_SOURCE
             )
             events_loader = Loader(db=self.db)
-            events_loader.vectorize_event(db_event)
+            # AWS Lambda cannot run functions asynchronously
+            events_loader.vectorize_event(db_event, async_add=False)
             event_ids = [db_event.id]
         else:
             event_ids = []

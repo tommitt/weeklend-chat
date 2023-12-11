@@ -14,6 +14,7 @@ THRESHOLD_NOT_DELIVERED_ANSWER = 300  # in seconds
 # non-mutable
 TIMESTAMP_ORIGIN = "2023-01-01"
 FAKE_USER_ID = -1
+VECTORSTORE_TEXT_KEY = "text"
 EMBEDDING_SIZE = 1536  # that's specific to OpenAIEmbeddings
 
 # from .env

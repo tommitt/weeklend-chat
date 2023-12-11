@@ -4,7 +4,8 @@ import pinecone
 from langchain.chat_models import ChatOpenAI
 from langchain.embeddings import OpenAIEmbeddings
 from langchain.retrievers.self_query.base import PineconeTranslator
-from langchain.vectorstores import Pinecone, VectorStore
+from langchain.vectorstores import VectorStore
+from langchain.vectorstores.pinecone import Pinecone
 
 from app.constants import (
     EMBEDDING_SIZE,
@@ -13,6 +14,7 @@ from app.constants import (
     PINECONE_ENV,
     PINECONE_INDEX,
     PINECONE_NAMESPACE,
+    VECTORSTORE_TEXT_KEY,
 )
 
 
@@ -20,7 +22,7 @@ def get_llm():
     return ChatOpenAI(model_name="gpt-3.5-turbo-1106", temperature=0)
 
 
-def get_vectorstore() -> VectorStore:
+def get_pinecone_index() -> pinecone.Index:
     pinecone.init(api_key=PINECONE_API_KEY, environment=PINECONE_ENV)
     if PINECONE_INDEX not in pinecone.list_indexes():
         logging.info(f"Creating Pinecone index at: {PINECONE_INDEX}")
@@ -36,10 +38,17 @@ def get_vectorstore() -> VectorStore:
                 else ""
             ),
         )
+    return pinecone.Index(PINECONE_INDEX)
+
+
+def get_vectorstore(index: pinecone.Index | None = None) -> VectorStore:
+    if index is None:
+        index = get_pinecone_index()
+
     return Pinecone(
-        index=pinecone.Index(PINECONE_INDEX),
+        index=index,
         embedding=OpenAIEmbeddings(openai_api_key=OPENAI_API_KEY),
-        text_key="text",
+        text_key=VECTORSTORE_TEXT_KEY,
         namespace=PINECONE_NAMESPACE,
     )
 
