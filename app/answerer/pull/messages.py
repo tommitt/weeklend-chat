@@ -1,9 +1,13 @@
 MESSAGE_WELCOME = """\
 Ciao, questa è la chat business di Weeklend.
-Qua puoi inserire gli eventi che verranno poi mostrati ai nostri utenti.
-Cercherò di darti una mano a estrarre le informazioni necessarie per \
-registrare un evento correttamente.
-Potresti iniziare descrivendomi la tua attività?\
+Qua puoi inserire le informazioni dei tuoi eventi che verranno poi \
+mostrati agli utenti.
+Cercherò di darti una mano a estrarre le informazioni necessarie \
+per registrare un evento correttamente, ma come prima cosa ho bisogno \
+che tu descriva l'attività che rappresenti e che ospita l'evento. 
+L'attività viene registrata una sola volta, e una volta fatto, \
+procederemo a registrare ogni evento successivo. 
+Inizia pure a descrivermi l'attività!\
 """
 
 MESSAGE_NOT_DELIVERED = """\
