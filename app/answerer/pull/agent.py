@@ -41,11 +41,13 @@ class RegisterEventToolInput(BaseModel):
     description: str = Field(
         description="The description of the event. It should be at least 240 characters"
     )
-    # TODO: llm should never invent the URL
-    url: str = Field(description="External URL linking to the event's website")
+    location: str = Field(description="Location where the event happens")
     start_date: datetime.date = Field(description="The start date of the event")
     end_date: Optional[datetime.date] = Field(description="The end date of the event")
-    location: Optional[str] = Field(description="Location where the event happens")
+    # TODO: make url mandotory
+    url: Optional[str] = Field(
+        description="External URL linking to the event's website"
+    )
     time_of_day: Optional[DayTimeEnum] = Field(
         description="This is the time of the day"
     )
@@ -87,10 +89,10 @@ class AiAgent:
         self,
         name: str,
         description: str,
-        url: str,
+        location: str,
         start_date: datetime.date,
         end_date: datetime.date | None = None,
-        location: str | None = None,
+        url: str | None = None,
         time_of_day: DayTimeEnum | None = None,
     ) -> AnswerOutput:
         if self.db is not None:
