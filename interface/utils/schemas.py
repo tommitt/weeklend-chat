@@ -2,14 +2,14 @@ import datetime
 
 from pydantic import BaseModel
 
-from app.db.schemas import BusinessInDB
+from app.db.schemas import BusinessInDB, UserInDB
 
 
 class ChatbotInput(BaseModel):
     user_query: str
     today_date: datetime.date
     previous_conversation: list[tuple]
-    business: BusinessInDB | None
+    user: UserInDB | BusinessInDB
 
 
 class DashboardOutput(BaseModel):
