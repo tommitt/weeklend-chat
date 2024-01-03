@@ -17,12 +17,14 @@ from app.db.enums import AnswerType
 from app.db.models import (
     BusinessConversationORM,
     BusinessORM,
+    ClickORM,
     ConversationORM,
     EventORM,
     UserORM,
 )
 from app.db.schemas import (
     Business,
+    Click,
     Conversation,
     ConversationTemp,
     ConversationUpd,
@@ -331,3 +333,15 @@ def delete_event_by_id(db: Session, event_id: int, from_vectorstore_only: bool =
         db.delete(db_event)
 
     db.commit()
+
+
+# Click
+def register_click(db: Session, click_in: Click) -> ClickORM:
+    click_dict = click_in.dict()
+    click_dict["registered_at"] = datetime.datetime.utcnow()
+
+    db_click = ClickORM(**click_dict)
+    db.add(db_click)
+    db.commit()
+    db.refresh(db_click)
+    return db_click

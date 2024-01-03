@@ -112,3 +112,19 @@ class EventORM(Base):
 
     def __repr__(self) -> str:
         return f"EventORM(id={self.id!r})"
+
+
+class ClickORM(Base):
+    __tablename__ = "clicks"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    event_id: Mapped[int] = mapped_column(ForeignKey("events.id"))
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    registered_at: Mapped[datetime.datetime]
+
+    # relationships
+    event: Mapped["EventORM"] = relationship()
+    user: Mapped["UserORM"] = relationship()
+
+    def __repr__(self) -> str:
+        return f"ClickORM(id={self.id!r}, event_id={self.event_id!r}, user_id={self.user_id!r})"

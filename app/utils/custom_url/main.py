@@ -7,7 +7,8 @@ from sqlalchemy.orm import Session
 
 from app.db.db import get_db
 from app.db.models import UserORM
-from app.db.services import get_event_by_id, get_user_by_id
+from app.db.schemas import Click
+from app.db.services import get_event_by_id, get_user_by_id, register_click
 from app.utils.custom_url.schemas import EncodingPayload
 
 CUSTOM_ROOT_URL = "wklnd.it"
@@ -59,7 +60,9 @@ def forward_to_target_url(url_key: str, db: Session = Depends(get_db)) -> None:
             detail="This user does not exist.",
         )
 
-    # TODO: store click to database
+    db_click = register_click(
+        db=db, click_in=Click(event_id=payload.event_id, user_id=payload.event_id)
+    )
 
     return RedirectResponse(db_event.url)
 
