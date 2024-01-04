@@ -60,7 +60,7 @@ def forward_to_target_url(url_key: str, db: Session = Depends(get_db)) -> None:
         )
 
     db_click = register_click(
-        db=db, click_in=Click(event_id=payload.event_id, user_id=payload.event_id)
+        db=db, click_in=Click(event_id=payload.event_id, user_id=payload.user_id)
     )
 
     return RedirectResponse(db_event.url)
