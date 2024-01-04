@@ -1,17 +1,16 @@
 import base64
 import json
 
-from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
+from app.constants import CUSTOM_ROOT_URL
 from app.db.db import get_db
 from app.db.models import UserORM
 from app.db.schemas import Click
 from app.db.services import get_event_by_id, get_user_by_id, register_click
 from app.utils.custom_url.schemas import EncodingPayload
-
-CUSTOM_ROOT_URL = "wklnd.it"
 
 
 def encode_url_key(payload: EncodingPayload) -> str:
@@ -29,10 +28,10 @@ def decode_url_key(encoded_url_key: str) -> EncodingPayload:
     )
 
 
-app = FastAPI()
+router = APIRouter()
 
 
-@app.get("/events/{url_key}")
+@router.get("/events/{url_key}")
 def forward_to_target_url(url_key: str, db: Session = Depends(get_db)) -> None:
     try:
         payload = decode_url_key(url_key)
@@ -67,7 +66,8 @@ def forward_to_target_url(url_key: str, db: Session = Depends(get_db)) -> None:
     return RedirectResponse(db_event.url)
 
 
-@app.post("/custom_url")
 def get_custom_url(payload: EncodingPayload) -> str:
     url_key = encode_url_key(payload)
-    return CUSTOM_ROOT_URL + app.url_path_for("forward_to_target_url", url_key=url_key)
+    return CUSTOM_ROOT_URL + router.url_path_for(
+        "forward_to_target_url", url_key=url_key
+    )

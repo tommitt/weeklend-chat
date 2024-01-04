@@ -21,14 +21,14 @@ from app.utils.whatsapp_client import WhatsappWrapper
 webhook = APIRouter()
 
 
-@webhook.post("/send_template_message")
+# @webhook.post("/send_template_message")
 async def send_template_message(from_number_id: str, to_phone_number: str):
     wa_client = WhatsappWrapper(number_id=from_number_id)
     response = wa_client.send_template_message(to_phone_number, "hello_world", "en_US")
     return {"status_code": response.status_code, "content": response.text}
 
 
-@webhook.post("/send_text_message")
+# @webhook.post("/send_text_message")
 async def send_text_message(from_number_id: str, to_phone_number: str, message: str):
     wa_client = WhatsappWrapper(number_id=from_number_id)
     response = wa_client.send_message(to_phone_number, message)
