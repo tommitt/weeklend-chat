@@ -5,7 +5,7 @@ from app.answerer.webhook import webhook
 from app.utils.custom_url.main import router
 
 app = FastAPI()
-app.include_router(webhook)  # TODO: make this under auth
+app.include_router(webhook)
 app.include_router(router)
 
 

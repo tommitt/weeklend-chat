@@ -35,7 +35,7 @@ async def send_text_message(from_number_id: str, to_phone_number: str, message: 
     return {"status_code": response.status_code, "content": response.text}
 
 
-@webhook.get("/webhooks")
+@webhook.get("/webhooks", include_in_schema=False)
 async def webhook_get_request(request: Request):
     hub_mode = request.query_params.get("hub.mode")
     hub_challenge = request.query_params.get("hub.challenge")
@@ -56,7 +56,7 @@ async def webhook_get_request(request: Request):
     )
 
 
-@webhook.post("/webhooks")
+@webhook.post("/webhooks", include_in_schema=False)
 async def webhook_post_request(payload: WebhookPayload, db: Session = Depends(get_db)):
     db_conversation = None
     try:
