@@ -22,8 +22,10 @@ from app.answerer.push.prompts import (
 from app.answerer.schemas import AnswerOutput, DayTimeEnum
 from app.constants import N_EVENTS_CONTEXT, N_EVENTS_MAX
 from app.db.enums import AnswerType
+from app.db.schemas import Click, UserInDB
 from app.db.services import get_event_by_id
 from app.utils.conn import get_llm, get_vectorstore, get_vectorstore_translator
+from app.utils.custom_url import get_custom_url
 from app.utils.datetime_utils import date_to_timestamp
 
 
@@ -39,8 +41,14 @@ class SearchEventsToolInput(BaseModel):
 
 
 class AiAgent:
-    def __init__(self, db: Session, today_date: datetime.date | None = None) -> None:
+    def __init__(
+        self,
+        db: Session,
+        user: UserInDB,
+        today_date: datetime.date | None = None,
+    ) -> None:
         self.db = db
+        self.user = user
         self.today_date = (
             today_date if today_date is not None else datetime.date.today()
         )
@@ -143,7 +151,11 @@ class AiAgent:
                     if db_event.location is not None
                     else ""
                 )
-                + (f"URL: {db_event.url}\n" if db_event.url is not None else "")
+                + (
+                    f"URL: {get_custom_url(Click(event_id=db_event.id, user_id=self.user.id))}\n"
+                    if db_event.url is not None
+                    else ""
+                )
             )
         return "\n----------\n".join(doc_texts)
 

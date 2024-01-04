@@ -22,7 +22,7 @@ from app.constants import (
 )
 from app.db.enums import AnswerType
 from app.db.models import ConversationORM, UserORM
-from app.db.schemas import User
+from app.db.schemas import User, UserInDB
 from app.db.services import (
     block_user,
     get_user,
@@ -139,7 +139,7 @@ class UserJourney:
         )
 
         if output is None:
-            agent = AiAgent(db=self.db)
+            agent = AiAgent(db=self.db, user=UserInDB.from_orm(db_user))
             output = agent.run(
                 user_query,
                 previous_conversation=self._get_previous_conversation(db_user.id),

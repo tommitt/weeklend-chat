@@ -2,9 +2,11 @@ from fastapi import FastAPI
 from mangum import Mangum
 
 from app.answerer.webhook import webhook
+from app.utils.custom_url import router
 
 app = FastAPI()
 app.include_router(webhook)
+app.include_router(router)
 
 
 @app.get("/")

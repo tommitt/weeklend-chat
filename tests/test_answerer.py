@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.answerer.push import AiAgent
 from app.db.enums import AnswerType
+from app.db.schemas import UserInDB
 
 
 @pytest.fixture(scope="module")
@@ -14,7 +15,13 @@ def ref_date() -> datetime.date:
 
 @pytest.fixture(scope="module")
 def ai_agent(database_session: Session, ref_date: datetime.date) -> AiAgent:
-    return AiAgent(db=database_session, today_date=ref_date)
+    user = UserInDB(
+        id=-9,
+        phone_number="999999999999",
+        is_blocked=False,
+        registered_at=datetime.datetime.now(),
+    )
+    return AiAgent(db=database_session, user=user, today_date=ref_date)
 
 
 queries_and_expected_answer_types = {

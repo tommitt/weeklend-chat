@@ -5,7 +5,7 @@ import streamlit as st
 
 from app.answerer.chats import ChatType
 from app.answerer.schemas import AnswerOutput
-from app.db.schemas import BusinessInDB
+from app.db.schemas import BusinessInDB, UserInDB
 from app.utils.conversation_utils import streamlit_to_langchain_conversation
 from interface.backend import FASTAPI_URL
 from interface.utils.schemas import ChatbotInput
@@ -24,7 +24,7 @@ def ui() -> None:
         col1, col2 = st.columns(2)
         business_name = col1.text_input("Nome del Business")
         business_description = col2.text_input("Descrizione del Business")
-        business = BusinessInDB(
+        user = BusinessInDB(
             id=-9,
             phone_number="999999999999",
             registered_at=datetime.datetime.now(),
@@ -32,7 +32,12 @@ def ui() -> None:
             description=None if business_description == "" else business_description,
         )
     else:
-        business = None
+        user = UserInDB(
+            id=-9,
+            phone_number="999999999999",
+            is_blocked=False,
+            registered_at=datetime.datetime.now(),
+        )
 
     for message in st.session_state["messages"]:
         with st.chat_message(message["role"]):
@@ -51,7 +56,7 @@ def ui() -> None:
                     previous_conversation=streamlit_to_langchain_conversation(
                         st.session_state["messages"]
                     ),
-                    business=business,
+                    user=user,
                 ).json(),
             )
             answer_out = AnswerOutput(**response.json())

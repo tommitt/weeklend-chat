@@ -125,3 +125,16 @@ class EventInVectorstore(BaseModel):
         event.end_date = date_to_timestamp(event.end_date)
 
         return event
+
+
+class Click(BaseModel):
+    event_id: int
+    user_id: int
+
+
+class ClickInDB(Click):
+    id: int
+    registered_at: datetime.datetime
+
+    class Config:
+        orm_mode = True
