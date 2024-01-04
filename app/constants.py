@@ -16,7 +16,7 @@ TIMESTAMP_ORIGIN = "2023-01-01"
 FAKE_USER_ID = -1
 VECTORSTORE_TEXT_KEY = "text"
 EMBEDDING_SIZE = 1536  # that's specific to OpenAIEmbeddings
-CUSTOM_ROOT_URL = "api.wklnd.com"  # set on AWS
+CUSTOM_ROOT_URL = "https://api.wklnd.com"  # set on AWS
 
 # from .env
 import os
