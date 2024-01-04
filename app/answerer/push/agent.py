@@ -22,11 +22,10 @@ from app.answerer.push.prompts import (
 from app.answerer.schemas import AnswerOutput, DayTimeEnum
 from app.constants import N_EVENTS_CONTEXT, N_EVENTS_MAX
 from app.db.enums import AnswerType
-from app.db.schemas import UserInDB
+from app.db.schemas import Click, UserInDB
 from app.db.services import get_event_by_id
 from app.utils.conn import get_llm, get_vectorstore, get_vectorstore_translator
-from app.utils.custom_url.main import get_custom_url
-from app.utils.custom_url.schemas import EncodingPayload
+from app.utils.custom_url import get_custom_url
 from app.utils.datetime_utils import date_to_timestamp
 
 
@@ -153,7 +152,7 @@ class AiAgent:
                     else ""
                 )
                 + (
-                    f"URL: {get_custom_url(EncodingPayload(event_id=db_event.id, user_id=self.user.id))}\n"
+                    f"URL: {get_custom_url(Click(event_id=db_event.id, user_id=self.user.id))}\n"
                     if db_event.url is not None
                     else ""
                 )

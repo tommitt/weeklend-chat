@@ -10,22 +10,19 @@ from app.db.db import get_db
 from app.db.models import UserORM
 from app.db.schemas import Click
 from app.db.services import get_event_by_id, get_user_by_id, register_click
-from app.utils.custom_url.schemas import EncodingPayload
 
 
-def encode_url_key(payload: EncodingPayload) -> str:
+def encode_url_key(payload: Click) -> str:
     payload_list = [value for _, value in vars(payload).items()]
     payload_bytes = json.dumps(payload_list).encode("utf-8")
     encoded_bytes = base64.urlsafe_b64encode(payload_bytes)
     return encoded_bytes.decode()
 
 
-def decode_url_key(encoded_url_key: str) -> EncodingPayload:
+def decode_url_key(encoded_url_key: str) -> Click:
     decoded_bytes = base64.urlsafe_b64decode(encoded_url_key)
     decoded_list = json.loads(decoded_bytes.decode("utf-8"))
-    return EncodingPayload.parse_obj(
-        dict(zip(EncodingPayload.__annotations__, decoded_list))
-    )
+    return Click.parse_obj(dict(zip(Click.__annotations__, decoded_list)))
 
 
 router = APIRouter()
@@ -67,7 +64,7 @@ def forward_to_target_url(url_key: str, db: Session = Depends(get_db)) -> None:
     return RedirectResponse(db_event.url)
 
 
-def get_custom_url(payload: EncodingPayload) -> str:
+def get_custom_url(payload: Click) -> str:
     url_key = encode_url_key(payload)
     return CUSTOM_ROOT_URL + router.url_path_for(
         "forward_to_target_url", url_key=url_key
