@@ -185,11 +185,6 @@ class GFormLoader:
         "> 100€": PriceLevel.very_expensive,
     }
 
-    def _optional_column(self, string: str) -> str | None:
-        if pd.isna(string) or string == "-" or string == "":
-            return None
-        return string.strip()
-
     def run(self) -> None:
         logging.info(f"Starting gform insertion for {self.identifier}.")
 
@@ -256,7 +251,9 @@ class GFormLoader:
                             if d != "Nessuna di queste (il locale è sempre aperto)":
                                 closed_days[self._CLOSED_DAYS_MAP[d.strip(" ")]] = True
 
-                url = self._optional_column(row[cols["url"]])
+                url = str(row[cols["url"]]).strip()
+                if url in ["-", "", "nan", "null"]:
+                    raise ValueError("Url is empty.")
 
                 price_level = self._PRICE_LEVEL_MAP[row[cols["price_level"]]]
 

@@ -153,8 +153,6 @@ class AiAgent:
                 )
                 + (
                     f"URL: {get_custom_url(Click(event_id=db_event.id, user_id=self.user.id))}\n"
-                    if db_event.url is not None
-                    else ""
                 )
             )
         return "\n----------\n".join(doc_texts)

@@ -104,7 +104,7 @@ class EventORM(Base):
     # additional info
     name: Mapped[Optional[str]]
     location: Mapped[Optional[str]]
-    url: Mapped[Optional[str]]
+    url: Mapped[str]
     price_level: Mapped[Optional[PriceLevel]]
 
     # relationships

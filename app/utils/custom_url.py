@@ -55,12 +55,6 @@ def forward_to_target_url(url_key: str, db: Session = Depends(get_db)) -> None:
         db=db, click_in=Click(event_id=payload.event_id, user_id=payload.user_id)
     )
 
-    if db_event.url is None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Url not available for this event.",
-        )
-
     return RedirectResponse(db_event.url)
 
 

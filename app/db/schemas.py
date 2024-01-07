@@ -83,7 +83,7 @@ class Event(BaseModel):
     # additional info
     name: str | None
     location: str | None
-    url: str | None
+    url: str
     price_level: PriceLevel | None = None
 
 
