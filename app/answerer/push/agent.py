@@ -56,6 +56,7 @@ class AiAgent:
         self.vectorstore = get_vectorstore()
         self.vectorstore_translator = get_vectorstore_translator()
         self.set_tools()
+        self._retrieved_events: dict[str, int] = {}
 
     def search_events(
         self,
@@ -137,12 +138,19 @@ class AiAgent:
         )
 
         doc_texts = []
+        self._retrieved_events = {}
         for doc in relevant_docs:
             db_event = get_event_by_id(db=self.db, id=doc.metadata["id"])
             if db_event is None:
                 raise Exception(
                     f"Event in vectorstore is not present in db (id={doc.metadata['id']})."
                 )
+
+            custom_url = get_custom_url(
+                Click(event_id=db_event.id, user_id=self.user.id)
+            )
+            self._retrieved_events[custom_url] = db_event.id
+
             doc_texts.append(
                 f"ID: {db_event.id}\n"
                 + f"Description: {doc.page_content}\n"
@@ -151,9 +159,7 @@ class AiAgent:
                     if db_event.location is not None
                     else ""
                 )
-                + (
-                    f"URL: {get_custom_url(Click(event_id=db_event.id, user_id=self.user.id))}\n"
-                )
+                + f"URL: {custom_url}\n"
             )
         return "\n----------\n".join(doc_texts)
 
@@ -169,6 +175,13 @@ class AiAgent:
             func=self.search_events,
             return_direct=True,
         )
+
+    def _find_recommended_events(self, answer: str) -> list[int]:
+        event_ids = []
+        for url, event_id in self._retrieved_events.items():
+            if answer.find(url) > 0:
+                event_ids.append(event_id)
+        return event_ids
 
     def get_agent(
         self, previous_conversation: list[tuple[str, str]]
@@ -223,5 +236,8 @@ class AiAgent:
         recommender_output = recommender.invoke(
             {"user_query": user_query, "context": context}
         )
-        # TODO: add used_event_ids
-        return AnswerOutput(answer=recommender_output, type=AnswerType.ai)
+        return AnswerOutput(
+            answer=recommender_output,
+            type=AnswerType.ai,
+            used_event_ids=self._find_recommended_events(recommender_output),
+        )
