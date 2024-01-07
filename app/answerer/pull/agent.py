@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from app.answerer.pull.messages import (
     MESSAGE_REGISTERED_EVENT,
     MESSAGE_UPDATED_BUSINESS,
+    MESSAGE_URL_NOT_PROVIDED,
 )
 from app.answerer.pull.prompts import (
     BUSINESS_INFO_PROMPT,
@@ -37,20 +38,13 @@ class UpdateBusinessToolInput(BaseModel):
 
 
 class RegisterEventToolInput(BaseModel):
-    name: str = Field(description="The name of the event")
-    description: str = Field(
-        description="The description of the event. It should be at least 240 characters"
-    )
-    location: str = Field(description="Location where the event happens")
-    start_date: datetime.date = Field(description="The start date of the event")
-    end_date: Optional[datetime.date] = Field(description="The end date of the event")
-    # TODO: make url mandotory
-    url: Optional[str] = Field(
-        description="External URL linking to the event's website"
-    )
-    time_of_day: Optional[DayTimeEnum] = Field(
-        description="This is the time of the day"
-    )
+    name: str = Field(description="Event's name")
+    description: str = Field(description="Event's description")
+    location: str = Field(description="Event's location")
+    start_date: datetime.date = Field(description="Event's start date")
+    end_date: Optional[datetime.date] = Field(description="Event's end date")
+    url: Optional[str] = Field(description="Event's website URL")
+    time_of_day: Optional[DayTimeEnum] = Field(description="Event's time of the day")
 
 
 class AiAgent:
@@ -95,6 +89,11 @@ class AiAgent:
         url: str | None = None,
         time_of_day: DayTimeEnum | None = None,
     ) -> AnswerOutput:
+        if url is None:
+            return AnswerOutput(
+                answer=MESSAGE_URL_NOT_PROVIDED, type=AnswerType.template
+            )
+
         if self.db is not None:
             event = Event(
                 description="\n".join([name, description]),

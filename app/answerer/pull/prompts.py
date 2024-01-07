@@ -21,34 +21,22 @@ EVENT_SYSTEM_PROMPT = (
 Your task is to collect events' information from the business your talking to \
 and register it into our database.
 
-Gather information seamlessly through a conversation. \
-Ensure all provided details are accurately stored without omissions or alterations. \
-If any essential information is not gathered during the conversation, \
-prompt the user to provide the missing details explicitly. \
-Your role is to adeptly gather information from the business, \
-ensuring all listed details are provided.
-
 You are provided with the business' information that you may use to enrich the \
 provided events' descriptions.
- 
+
+Register the event to the database only when you have collected all the required information, \
+prompt the user to provide them otherwise.
+
 Consider that today is {today_date}.\
 """
 )
 
 BUSINESS_TOOL_DESCRIPTION = """\
-Register information of a business to our database.
-
-Use this function only when you have collected all required information, \
-otherwise prompt the user to provide the missing information.
-Do not invent any information when registering something to the database.\
+Register information of a business to our database.\
 """
 
 EVENT_TOOL_DESCRIPTION = """\
-Register an event to our database.
-
-Use this function only when you have collected all required information, \
-otherwise prompt the user to provide the missing information.
-Do not invent any information when registering something to the database.\
+Register an event to our database.\
 """
 
 BUSINESS_INFO_PROMPT = """\ 

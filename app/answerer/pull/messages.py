@@ -33,3 +33,9 @@ La registrazione dell'evento è stata completata con successo:
 - Luogo: {location}
 - Diurno/notturno: {time_of_day}\
 """
+
+MESSAGE_URL_NOT_PROVIDED = """\
+Per procedere con la registrazione è necessario che tu fornisca \
+un URL che rimandi a un sito esterno in cui si possono trovare \
+ulteriori informazioni sull'evento.\
+"""
