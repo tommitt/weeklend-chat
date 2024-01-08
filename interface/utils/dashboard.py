@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.constants import FAKE_USER_ID
 from app.db.enums import AnswerType
-from app.db.models import ConversationORM, UserORM
+from app.db.models import ClickORM, ConversationORM, UserORM
 from interface.utils.schemas import DashboardOutput
 
 
@@ -23,6 +23,14 @@ def get_dashboard_stats(
         .filter(
             UserORM.registered_at.between(start_dt, end_dt),
             UserORM.id != FAKE_USER_ID,
+        )
+        .scalar()
+    )
+
+    clicks_count = (
+        db.query(func.count(distinct(ClickORM.id)))
+        .filter(
+            ClickORM.registered_at.between(start_dt, end_dt),
         )
         .scalar()
     )
@@ -52,8 +60,9 @@ def get_dashboard_stats(
     mask_template = df["answer_type"] == AnswerType.template
     mask_unanswered = df["answer_type"] == AnswerType.unanswered
 
-    # TODO: add median and max waiting times
-    # answer_diff = (df[mask_ai]["registered_at"] - df[mask_ai]["received_at"]).dt.seconds
+    median_answer_time = (
+        df[mask_ai]["registered_at"] - df[mask_ai]["received_at"]
+    ).dt.seconds.median()
 
     return DashboardOutput(
         users=users_count,
@@ -73,5 +82,7 @@ def get_dashboard_stats(
         conversations_answered_blocked=sum(mask_blocked),
         conversations_unanswered=sum(mask_unanswered),
         conversations_failed=sum(mask_fake_user) + sum(mask_failed),
+        clicks=clicks_count,
         avg_messages_per_user=messages_count / users_count if users_count > 0 else 0,
+        median_answer_time=median_answer_time,
     )

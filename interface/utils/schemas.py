@@ -27,4 +27,7 @@ class DashboardOutput(BaseModel):
     conversations_unanswered: int
     conversations_failed: int
 
+    clicks: int
+
     avg_messages_per_user: float
+    median_answer_time: float

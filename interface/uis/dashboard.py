@@ -29,11 +29,12 @@ def ui() -> None:
         st.dataframe(
             pd.DataFrame(
                 {
-                    "": ["Users", "Messages", "Avg messages x user"],
+                    "": ["Users", "Messages", "Avg messages x user", "Clicks"],
                     "Value": [
                         st.session_state.dashboard_out.users,
                         st.session_state.dashboard_out.conversations,
                         st.session_state.dashboard_out.avg_messages_per_user,
+                        st.session_state.dashboard_out.clicks,
                     ],
                 }
             ),
