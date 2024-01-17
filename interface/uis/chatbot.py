@@ -4,11 +4,14 @@ import requests
 import streamlit as st
 
 from app.answerer.chats import ChatType
+from app.answerer.push.messages import MESSAGE_WELCOME
 from app.answerer.schemas import AnswerOutput
 from app.db.schemas import BusinessInDB, UserInDB
 from app.utils.conversation_utils import streamlit_to_langchain_conversation
 from interface.backend import FASTAPI_URL
 from interface.utils.schemas import ChatbotInput
+
+MESSAGE_START_CHAT = """👉 Clicca su "invia" per iniziare chat"""
 
 
 def ui() -> None:
@@ -32,6 +35,16 @@ def ui() -> None:
             description=None if business_description == "" else business_description,
         )
     else:
+        col1, col2 = st.columns(2)
+        start_chat_message = col1.text_input(
+            "Start chat message", value=MESSAGE_START_CHAT, label_visibility="collapsed"
+        )
+        if col2.button("Welcome message", use_container_width=True):
+            st.session_state["messages"] += [
+                {"role": "user", "content": start_chat_message},
+                {"role": "assistant", "content": MESSAGE_WELCOME},
+            ]
+
         user = UserInDB(
             id=-9,
             phone_number="999999999999",
