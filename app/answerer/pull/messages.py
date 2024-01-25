@@ -24,14 +24,26 @@ Adesso puoi procedere nel registare un evento!\
 """
 
 MESSAGE_REGISTERED_EVENT = """\
-La registrazione dell'evento è stata completata con successo:
+Ho raccolto tutte le informazioni necessarie:
 - Nome: {name}
 - Descrizione: {description}
 - URL: {url}
 - Data di inizio: {start_date}
 - Data di fine: {end_date}
 - Luogo: {location}
-- Diurno/notturno: {time_of_day}\
+- Diurno/notturno: {time_of_day}
+
+Confermi la registrazione dell'evento con queste informazioni?\
+"""
+
+MESSAGE_CONFIRMED_REGISTRATION = """\
+Il tuo evento è stato registrato con successo!\
+"""
+
+MESSAGE_CANCELLED_REGISTRATION = """\
+La regitrazione dell'evento è stata annulata. \
+Puoi procedere con il modificare alcune informazioni o \
+nel registrare un nuovo evento.\
 """
 
 MESSAGE_URL_NOT_PROVIDED = """\

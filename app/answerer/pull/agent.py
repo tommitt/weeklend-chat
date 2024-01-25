@@ -2,7 +2,10 @@ import datetime
 import logging
 from typing import Optional
 
-from langchain.agents.output_parsers.openai_tools import OpenAIToolsAgentOutputParser
+from langchain.agents.output_parsers.openai_tools import (
+    OpenAIToolAgentAction,
+    OpenAIToolsAgentOutputParser,
+)
 from langchain.prompts import ChatPromptTemplate
 from langchain.schema.agent import AgentFinish
 from langchain.tools import StructuredTool
@@ -11,6 +14,8 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.answerer.pull.messages import (
+    MESSAGE_CANCELLED_REGISTRATION,
+    MESSAGE_CONFIRMED_REGISTRATION,
     MESSAGE_REGISTERED_EVENT,
     MESSAGE_UPDATED_BUSINESS,
     MESSAGE_URL_NOT_PROVIDED,
@@ -19,13 +24,15 @@ from app.answerer.pull.prompts import (
     BUSINESS_INFO_PROMPT,
     BUSINESS_SYSTEM_PROMPT,
     BUSINESS_TOOL_DESCRIPTION,
+    CONFIRM_TOOL_DESCRIPTION,
+    CONFIRMATION_SYSTEM_PROMPT,
     EVENT_SYSTEM_PROMPT,
     EVENT_TOOL_DESCRIPTION,
 )
 from app.answerer.schemas import AnswerOutput, DayTimeEnum
 from app.db.enums import AnswerType, CityEnum
 from app.db.schemas import BusinessInDB, Event
-from app.db.services import register_event, update_business_info
+from app.db.services import get_event_by_id, register_event, update_business_info
 from app.loader.loader import Loader
 from app.utils.conn import get_llm
 
@@ -45,6 +52,12 @@ class RegisterEventToolInput(BaseModel):
     end_date: Optional[datetime.date] = Field(description="Event's end date")
     url: Optional[str] = Field(description="Event's website URL")
     time_of_day: Optional[DayTimeEnum] = Field(description="Event's time of the day")
+
+
+class ConfirmRegisterationToolInput(BaseModel):
+    is_confirmed: bool = Field(
+        description="Whether the registration is confirmed or not"
+    )
 
 
 class AiAgent:
@@ -115,9 +128,6 @@ class AiAgent:
             db_event = register_event(
                 db=self.db, event_in=event, source=PULL_CHAT_SOURCE
             )
-            events_loader = Loader(db=self.db)
-            # AWS Lambda cannot run functions asynchronously
-            events_loader.vectorize_event(db_event, async_add=False)
             event_ids = [db_event.id]
         else:
             event_ids = []
@@ -132,15 +142,37 @@ class AiAgent:
                 location=location,
                 time_of_day=time_of_day,
             ),
-            type=AnswerType.template,
+            type=AnswerType.ai,
             used_event_ids=event_ids,
         )
+
+    def confirm_registration(self, is_confirmed: bool) -> AnswerOutput:
+        if self.db is not None:
+            db_event = get_event_by_id(db=self.db, id=self._pending_event_id)
+            if db_event is None:
+                raise Exception(
+                    f"Pending registration of event (id={self._pending_event_id}) failed. Event not in db."
+                )
+            if is_confirmed:
+                events_loader = Loader(db=self.db)
+                # AWS Lambda cannot run functions asynchronously
+                events_loader.vectorize_event(db_event, async_add=False)
+            else:
+                self.db.delete(db_event)
+
+        if is_confirmed:
+            answer = MESSAGE_CONFIRMED_REGISTRATION
+        else:
+            answer = MESSAGE_CANCELLED_REGISTRATION
+
+        return AnswerOutput(answer=answer, type=AnswerType.template)
 
     def set_tools(self) -> None:
         """
         Set tools for the llm to use:
         - update_business: update business information.
         - register_event: register event to database.
+        - confirm_registration: confirm the event registration.
         """
         self.business_tool = StructuredTool(
             name="update_business",
@@ -154,15 +186,30 @@ class AiAgent:
             args_schema=RegisterEventToolInput,
             func=self.register_event,
         )
+        self.confirm_tool = StructuredTool(
+            name="confirm_registration",
+            description=CONFIRM_TOOL_DESCRIPTION,
+            args_schema=ConfirmRegisterationToolInput,
+            func=self.confirm_registration,
+        )
 
     def run(
-        self, user_query: str, previous_conversation: list[tuple[str, str]] = []
+        self,
+        user_query: str,
+        previous_conversation: list[tuple[str, str]] = [],
+        pending_event_id: int | None = None,
     ) -> AnswerOutput:
         """Run AI agent on user query - it routes the LLM and tool calls."""
 
         if self.business.name is None:
             system_prompt = [("system", BUSINESS_SYSTEM_PROMPT)]
-            tool = self.business_tool
+            tools = [self.business_tool]
+
+        elif pending_event_id is not None:
+            self._pending_event_id = pending_event_id
+            system_prompt = [("system", CONFIRMATION_SYSTEM_PROMPT)]
+            tools = [self.confirm_tool]
+
         else:
             system_prompt = [
                 (
@@ -176,14 +223,14 @@ class AiAgent:
                     ),
                 ),
             ]
-            tool = self.event_tool
+            tools = [self.event_tool]
 
         prompt = ChatPromptTemplate.from_messages(
             system_prompt + previous_conversation + [("human", "{user_query}")]
         )
         agent = (
             prompt
-            | self.llm.bind(tools=[format_tool_to_openai_tool(tool)])
+            | self.llm.bind(tools=[format_tool_to_openai_tool(t) for t in tools])
             | OpenAIToolsAgentOutputParser()
         )
         agent_output = agent.invoke({"user_query": user_query})
@@ -194,6 +241,9 @@ class AiAgent:
                 type=AnswerType.conversational,
             )
 
-        tool_input = tool.args_schema(**agent_output[0].tool_input)
-        logging.info(f"Calling {tool.name} tool with input: {tool_input}")
-        return tool.run(tool_input.dict())
+        agent_call: OpenAIToolAgentAction = agent_output[0]
+        tools_map = {t.name: t for t in tools}
+        logging.info(
+            f"Calling {agent_call.tool} tool with input: {agent_call.tool_input}"
+        )
+        return tools_map[agent_call.tool].run(agent_call.tool_input)

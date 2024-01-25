@@ -10,6 +10,7 @@ class ChatbotInput(BaseModel):
     today_date: datetime.date
     previous_conversation: list[tuple]
     user: UserInDB | BusinessInDB
+    pending_event_id: int | None
 
 
 class DashboardOutput(BaseModel):

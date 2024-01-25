@@ -31,12 +31,23 @@ Consider that today is {today_date}.\
 """
 )
 
+CONFIRMATION_SYSTEM_PROMPT = (
+    GENERAL_SYSTEM_PROMPT
+    + """
+Decide whether to confirm the registration of the collected event or not.\
+"""
+)
+
 BUSINESS_TOOL_DESCRIPTION = """\
 Register information of a business to our database.\
 """
 
 EVENT_TOOL_DESCRIPTION = """\
 Register an event to our database.\
+"""
+
+CONFIRM_TOOL_DESCRIPTION = """\
+Confirm the registration of the event to our database.\
 """
 
 BUSINESS_INFO_PROMPT = """\ 

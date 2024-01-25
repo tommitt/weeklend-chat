@@ -31,17 +31,23 @@ async def chatbot_api(
         agent = PushAiAgent(
             db=db, user=chatbot_in.user, today_date=chatbot_in.today_date
         )
+        response = agent.run(
+            user_query=chatbot_in.user_query,
+            previous_conversation=chatbot_in.previous_conversation,
+        )
+
     elif chat_type == ChatType.pull:
         agent = PullAiAgent(
             db=None, business=chatbot_in.user, today_date=chatbot_in.today_date
         )
+        response = agent.run(
+            user_query=chatbot_in.user_query,
+            previous_conversation=chatbot_in.previous_conversation,
+            pending_event_id=chatbot_in.pending_event_id,
+        )
     else:
         raise Exception(f"Chat of type {chat_type} is not accepted.")
 
-    response = agent.run(
-        user_query=chatbot_in.user_query,
-        previous_conversation=chatbot_in.previous_conversation,
-    )
     return response
 
 

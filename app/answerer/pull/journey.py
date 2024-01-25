@@ -30,10 +30,14 @@ class BusinessJourney:
         output = AnswerOutput(answer=MESSAGE_WELCOME, type=AnswerType.template)
         return output, db_user
 
-    def _get_previous_conversation(self, user_id: int) -> list[tuple[str, str]]:
+    def _standard_business_journey(
+        self, db_user: BusinessORM, user_query: str
+    ) -> AnswerOutput:
+        agent = AiAgent(db=self.db, business=BusinessInDB.from_orm(db_user))
+
         db_conversations = get_user_conversations(
             db=self.db,
-            user_id=user_id,
+            user_id=db_user.id,
             from_datetime=(
                 datetime.datetime.now()
                 - datetime.timedelta(hours=CONVERSATION_HOURS_WINDOW)
@@ -41,15 +45,19 @@ class BusinessJourney:
             orm=BusinessConversationORM,
             max_messages=CONVERSATION_MAX_MESSAGES,
         )
-        return db_to_langchain_conversation(db_conversations)
 
-    def _standard_business_journey(
-        self, db_user: BusinessORM, user_query: str
-    ) -> AnswerOutput:
-        agent = AiAgent(db=self.db, business=BusinessInDB.from_orm(db_user))
+        if (
+            len(db_conversations) > 0
+            and db_conversations[-1].answer_type == AnswerType.ai
+        ):
+            pending_event_id = db_conversations[-1].used_event_ids[0]
+        else:
+            pending_event_id = None
+
         output = agent.run(
             user_query,
-            previous_conversation=self._get_previous_conversation(user_id=db_user.id),
+            previous_conversation=db_to_langchain_conversation(db_conversations),
+            pending_event_id=pending_event_id,
         )
         return output
 

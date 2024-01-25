@@ -6,6 +6,7 @@ import streamlit as st
 from app.answerer.chats import ChatType
 from app.answerer.push.messages import MESSAGE_WELCOME
 from app.answerer.schemas import AnswerOutput
+from app.db.enums import AnswerType
 from app.db.schemas import BusinessInDB, UserInDB
 from app.utils.conversation_utils import streamlit_to_langchain_conversation
 from interface.backend import FASTAPI_URL
@@ -20,6 +21,7 @@ def ui() -> None:
     if "init_chatbot" not in st.session_state:
         st.session_state["init_chatbot"] = True
         st.session_state["messages"] = []
+        st.session_state["last_answer_ai"] = False
 
     ref_date = st.date_input("Data di riferimento")
     chat_type = st.selectbox("Tipo di chat", options=[e.value for e in ChatType])
@@ -34,6 +36,8 @@ def ui() -> None:
             name=None if business_name == "" else business_name,
             description=None if business_description == "" else business_description,
         )
+        pending_event_id = 0 if st.session_state["last_answer_ai"] else None
+
     else:
         col1, col2 = st.columns(2)
         start_chat_message = col1.text_input(
@@ -51,6 +55,7 @@ def ui() -> None:
             is_blocked=False,
             registered_at=datetime.datetime.now(),
         )
+        pending_event_id = None
 
     for message in st.session_state["messages"]:
         with st.chat_message(message["role"]):
@@ -70,9 +75,12 @@ def ui() -> None:
                         st.session_state["messages"]
                     ),
                     user=user,
+                    pending_event_id=pending_event_id,
                 ).json(),
             )
             answer_out = AnswerOutput(**response.json())
+
+            st.session_state["last_answer_ai"] = answer_out.type == AnswerType.ai
 
         st.chat_message("assistant").markdown(answer_out.answer)
         st.session_state["messages"] += [
