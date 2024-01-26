@@ -86,9 +86,9 @@ class GFormLoader:
 
         if len(values) > 1:
             df = pd.DataFrame(values[1:]).replace("", np.nan)
-            df.loc[
-                :, [col for col in range(df.columns.max() + 1, len(values[0]))]
-            ] = np.nan
+            df.loc[:, [col for col in range(df.columns.max() + 1, len(values[0]))]] = (
+                np.nan
+            )
             df.columns = uniquify_columns(values[0])
 
             self.df = df
