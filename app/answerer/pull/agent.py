@@ -160,12 +160,14 @@ class AiAgent:
             else:
                 self.db.delete(db_event)
 
-        if is_confirmed:
-            answer = MESSAGE_CONFIRMED_REGISTRATION
-        else:
-            answer = MESSAGE_CANCELLED_REGISTRATION
-
-        return AnswerOutput(answer=answer, type=AnswerType.template)
+        return AnswerOutput(
+            answer=(
+                MESSAGE_CONFIRMED_REGISTRATION
+                if is_confirmed
+                else MESSAGE_CANCELLED_REGISTRATION
+            ),
+            type=AnswerType.template,
+        )
 
     def set_tools(self) -> None:
         """

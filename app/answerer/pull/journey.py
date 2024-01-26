@@ -1,4 +1,5 @@
 import datetime
+import json
 
 from sqlalchemy.orm import Session
 
@@ -50,7 +51,7 @@ class BusinessJourney:
             len(db_conversations) > 0
             and db_conversations[-1].answer_type == AnswerType.ai
         ):
-            pending_event_id = db_conversations[-1].used_event_ids[0]
+            pending_event_id = json.loads(db_conversations[-1].used_event_ids)[0]
         else:
             pending_event_id = None
 
