@@ -255,18 +255,26 @@ class LovelangheScraper(BaseScraper):
             opening_time, closing_time
         )
 
-        contents = soup.find_all(
+        text = soup.find(
             "div",
             {
                 "class",
-                "content typography typography--dropcap-none base-section-col__content",
+                "typography typography--dropcap-none typography--is-right columns__typography",
             },
-        )
-        text = contents[0].text.strip()
-        address = contents[1].text.strip()[11:]
+        ).text.strip()
+
+        address = soup.find(
+            "div",
+            {
+                "class",
+                "typography typography--dropcap-none typography--is-left columns__typography",
+            },
+        ).text.strip()[11:]
 
         description = "\n".join([title, subtitle, text])
-        location = " - ".join([place, address, city])
+        location = " - ".join([place, address])
+        if city not in location:
+            location += f" - {city}"
 
         return Event(
             description=description,
