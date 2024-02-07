@@ -22,7 +22,6 @@ from app.answerer.pull.messages import (
 )
 from app.answerer.pull.prompts import (
     BUSINESS_INFO_PROMPT,
-    BUSINESS_SYSTEM_PROMPT,
     BUSINESS_TOOL_DESCRIPTION,
     CONFIRM_TOOL_DESCRIPTION,
     CONFIRMATION_SYSTEM_PROMPT,
@@ -203,11 +202,11 @@ class AiAgent:
     ) -> AnswerOutput:
         """Run AI agent on user query - it routes the LLM and tool calls."""
 
-        if self.business.name is None:
-            system_prompt = [("system", BUSINESS_SYSTEM_PROMPT)]
-            tools = [self.business_tool]
+        # if self.business.name is None:
+        #     system_prompt = [("system", BUSINESS_SYSTEM_PROMPT)]
+        #     tools = [self.business_tool]
 
-        elif pending_event_id is not None:
+        if pending_event_id is not None:
             self._pending_event_id = pending_event_id
             system_prompt = [("system", CONFIRMATION_SYSTEM_PROMPT)]
             tools = [self.confirm_tool]
