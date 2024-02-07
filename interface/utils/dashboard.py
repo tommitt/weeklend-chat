@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.constants import FAKE_USER_ID
 from app.db.enums import AnswerType
-from app.db.models import ClickORM, ConversationORM, UserORM
+from app.db.models import ClickORM, ConversationORM, EventORM, UserORM
 from interface.utils.schemas import DashboardOutput
 
 
@@ -64,6 +64,20 @@ def get_dashboard_stats(
         df[mask_ai]["registered_at"] - df[mask_ai]["received_at"]
     ).dt.seconds.median()
 
+    uploaded_events_per_source = (
+        db.query(EventORM.source, func.count().label("total_count"))
+        .filter(EventORM.registered_at.between(start_dt, end_dt))
+        .group_by(EventORM.source)
+        .all()
+    )
+
+    active_events_per_source = (
+        db.query(EventORM.source, func.count().label("total_count"))
+        .filter(EventORM.start_date <= end_dt, EventORM.end_date >= start_dt)
+        .group_by(EventORM.source)
+        .all()
+    )
+
     return DashboardOutput(
         users=users_count,
         users_new=new_user_count,
@@ -85,4 +99,12 @@ def get_dashboard_stats(
         clicks=clicks_count,
         avg_messages_per_user=messages_count / users_count if users_count > 0 else 0,
         median_answer_time=median_answer_time,
+        uploaded_events={
+            "Source": [r.source for r in uploaded_events_per_source],
+            "# Events": [r.total_count for r in uploaded_events_per_source],
+        },
+        active_events={
+            "Source": [r.source for r in active_events_per_source],
+            "# Events": [r.total_count for r in active_events_per_source],
+        },
     )

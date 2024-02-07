@@ -95,6 +95,19 @@ def ui() -> None:
             container=col_answers,
         )
 
+        st.header(f"Events")
+        col_upload, _, col_active = st.columns([10, 1, 10])
+
+        col_upload.subheader("Uploaded")
+        col_upload.dataframe(
+            st.session_state.dashboard_out.uploaded_events, use_container_width=True
+        )
+
+        col_active.subheader("Active")
+        col_active.dataframe(
+            st.session_state.dashboard_out.active_events, use_container_width=True
+        )
+
     else:
         st.caption("No stats to show")
 
