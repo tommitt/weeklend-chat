@@ -31,7 +31,7 @@ class DashboardOutput(BaseModel):
     clicks: int
 
     avg_messages_per_user: float
-    median_answer_time: float
+    avg_answer_time: float
 
     uploaded_events: dict[str, list]
     active_events: dict[str, list]

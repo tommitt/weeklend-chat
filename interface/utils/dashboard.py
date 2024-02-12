@@ -60,9 +60,13 @@ def get_dashboard_stats(
     mask_template = df["answer_type"] == AnswerType.template
     mask_unanswered = df["answer_type"] == AnswerType.unanswered
 
-    median_answer_time = (
-        df[mask_ai]["registered_at"] - df[mask_ai]["received_at"]
-    ).dt.seconds.median()
+    avg_answer_time = (
+        0
+        if df.empty
+        else (
+            df[mask_ai]["registered_at"] - df[mask_ai]["received_at"]
+        ).dt.seconds.mean()
+    )
 
     uploaded_events_per_source = (
         db.query(EventORM.source, func.count().label("total_count"))
@@ -98,7 +102,7 @@ def get_dashboard_stats(
         conversations_failed=sum(mask_fake_user) + sum(mask_failed),
         clicks=clicks_count,
         avg_messages_per_user=messages_count / users_count if users_count > 0 else 0,
-        median_answer_time=median_answer_time,
+        avg_answer_time=avg_answer_time,
         uploaded_events={
             "Source": [r.source for r in uploaded_events_per_source],
             "# Events": [r.total_count for r in uploaded_events_per_source],
